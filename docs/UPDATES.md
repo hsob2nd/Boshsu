@@ -1,16 +1,27 @@
-> RC3 supersedes the raw cursor ownership described in the RC2 report. See [the current correction report](INPUT_UI_FIX.md).
+# Installing and updating Boshsu
 
-# In-client updates
+## First-time download
 
-Open **Options → Updates**, or search **updates** with Ctrl K.
+Download `Boshsu-1.2-clean.zip` from the official Releases page, extract the **whole ZIP** into a writable folder, then open **Boshsu.exe**. Do not run an executable inside the ZIP. Keep all included DLLs and resource folders together. Windows x64 and .NET Framework 4.8 are required; build tools and a separate PP calculator are not required. The source ZIP is for developers, not for playing.
 
-1. Check for updates. Optional startup checking is available.
-2. Enable beta releases for RC builds, or disable it for stable releases only.
-3. Download the available update. Progress and Cancel remain available; gameplay is not used to perform download/verification work.
-4. Click **Restart & install** when ready. Boshsu drains saves and closes before its installer replaces files, then restarts normally.
+The client creates a fresh local profile. Maps and custom skins are not bundled; select your library in Options. First launch uses Main Menu, primary display, native resolution and fullscreen; your later changes are saved.
 
-Updates come from `hsob2nd/Boshsu` GitHub Releases. The client verifies the GitHub SHA-256 digest, expected release identity, full file manifest and safe application-owned paths. Personal profiles, scores, progression, maps, skins, settings and custom PP provider files are preserved. A failed installation attempts to restore changed application files; one prior application version is retained under `Updates/rollback-*`. `Updates/last-update.txt` records the last installer outcome. The update downloader keeps one completed package and removes partial downloads when cancelled.
+## Manual update, without the client updater or an internet connection
 
-RC1 predates the updater: install the complete RC2 portable ZIP once to obtain this feature. RC2 and later can obtain subsequent compatible releases inside the client. No silent install, forced restart or credential upload is performed. GitHub connectivity is required only for checking/downloading; offline play remains independent.
+1. Download `Boshsu-1.2-clean.zip` **and `SHA256SUMS.txt` from the same official release**. Keep their original filenames together.
+2. Close the Boshsu installation you want to update.
+3. Double-click **Boshsu.Updater.exe** in your existing installation. If it predates RC5, extract the new complete ZIP into a separate folder and open its updater instead.
+4. Choose **Boshsu.exe in your existing installation**, the downloaded clean ZIP and its checksums file. The adjacent checksums file is selected automatically when available.
+5. Click **Verify & install**, review the target folder/version, then confirm. The updater runs a separate copy, replaces application files and opens Boshsu again.
 
-If installation cannot proceed (permissions, insufficient space or locked files), keep the existing installation and check the outcome/rollback folder. An installer will not ask for administrator elevation. [Report a reproducible issue](https://github.com/hsob2nd/Boshsu/issues); do not upload private account/configuration files or unreviewed logs.
+This manual path performs no network requests and requires no GitHub login. Checksums detect corruption; a locally supplied checksum file is **not** an authenticated publisher signature, so obtain both downloads from the official repository. Source ZIPs, missing/mismatched checksums, unsafe files and older versions are rejected. The target client must be closed; the updater does not kill it. Updating an unrelated copy is allowed while your other copy remains open.
+
+## In-client updates
+
+Open **Options → Updates**, or search **updates** with Ctrl K. Check, enable beta releases for RC builds, download, then click **Restart & install** when ready. Startup checking is optional. The client verifies the GitHub SHA-256 asset digest and drains saves before closing. RC1 predates this updater; install a complete current portable package once to obtain it.
+
+## Data preservation and recovery
+
+Both update paths use the same complete-package identity, file-manifest and safe-path validation. They replace application files only. Profiles, scores, progression, avatars, maps, skins, settings, replays, generated Map Lab difficulties and custom PP providers remain in place. One previous application version is retained under `Updates/rollback-*`; failed installation attempts to restore replaced files. `Updates/last-update.txt` records the outcome. Manual helper storage is pruned on later preparation; active/unrecognised folders are retained. Back up personal data before any update or move.
+
+No silent update, forced restart, forced process closure, administrator request or credential upload is performed. Offline play does not require update connectivity. If files are locked, space is insufficient or permission is denied, keep your existing installation and inspect the outcome/recovery folder. Report reproducible issues without uploading private accounts, configurations or unreviewed logs.
