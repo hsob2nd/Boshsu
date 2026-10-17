@@ -1,0 +1,33 @@
+# Never commit player data or credentials from an extracted client.
+/StableRemasteredAccounts/
+/Songs/
+/Skins/
+/MapLab/
+/replays/
+/Replays/
+/Logs/
+/performance/
+/assistance-diagnostics/
+/MaxAssistTelemetry/
+/Data/
+/cfg/
+/Cache/
+/Screenshots/
+/qualification/
+/interface-evidence/
+*.cfg
+*.db
+*.db.*
+*.ureplay
+*.osr
+*.log
+*.jsonl
+*.pdb
+.diagnostic-session.lock
+BoshShell.json*
+MapLabPresets.json*
+.env
+.env.*
+# Downloads belong in Releases, not Git history.
+*.zip
+*.building.*
