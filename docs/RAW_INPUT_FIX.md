@@ -1,3 +1,5 @@
+> RC3 supersedes the raw cursor ownership described in the RC2 report. See [the current correction report](INPUT_UI_FIX.md).
+
 # Boshsu 1.2 RC2 — Raw Input and F9 correction
 
 Raw Input now uses the shell's real cursor-visibility state inside the native engine. Previously the borrowed environment retained the standalone engine's always-visible flag, selecting the Windows-pointer fallback instead of the raw relative path. The shell now observes the pointer during native gameplay; it does not also apply sensitivity or warp it.

@@ -1,3 +1,5 @@
+> RC3 supersedes the raw cursor ownership described in the RC2 report. See [the current correction report](INPUT_UI_FIX.md).
+
 # In-client updates
 
 Open **Options → Updates**, or search **updates** with Ctrl K.
