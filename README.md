@@ -2,19 +2,19 @@
 
 **An open-source Bosh / osu!stable-style client project, powered internally by the McOsu gameplay runtime.**
 
-[Open-source project / GPL-3.0](LICENSE) Â· [GitHub Issues support](https://github.com/hsob2nd/Boshsu/issues)
+[Open-source project / GPL-3.0](LICENSE) · [GitHub Issues support](https://github.com/hsob2nd/Boshsu/issues)
 
 McOsu-derived code retains GPL-3.0, and original project modifications retain their stated GPL-3.0-or-later license. Corresponding frontend/native source is included with the prerelease. Bundled assets, dependencies and prebuilt modules have separate terms; this is not a claim that every distributed component is open source. See [license scope and exceptions](#open-source-and-license-scope).
 
 Boshsu combines familiar song selection and skin-controlled gameplay with local profiles, custom PP systems, Map Lab, assistance settings, progression and player customization.
 
-**Current client: 1.2 RC4 Â· Windows x64 Â· release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
+**Current client: 1.2 RC5 · Windows x64 · release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
 
 ## Download
 
-- **[Portable Windows x64 beta package â€” Boshsu-1.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.4/Boshsu-1.2-clean.zip)**
-- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.4/Boshsu-1.2-source.zip)
-- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.4/SHA256SUMS.txt)
+- **[Portable Windows x64 beta package — Boshsu-1.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.5/Boshsu-1.2-clean.zip)**
+- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.5/Boshsu-1.2-source.zip)
+- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.5/SHA256SUMS.txt)
 - [Release notes](CHANGELOG.md)
 
 The beta is a complete portable client package, not just an executable or source download. Extract the **whole client ZIP** into a writable folder and run **Boshsu.exe**. Keep its DLLs and resource folders together. Do not run the executable from inside the ZIP. The application is built for **Windows x64 and .NET Framework 4.8**; a separate compiler or PP calculator installation is not required to play.
@@ -23,9 +23,11 @@ The clean package starts with fresh local data. It excludes the developer's prof
 
 No maps or custom skins are bundled. Choose your Songs library and skin in Options. First launch opens the Main Menu in fullscreen at the primary display's native resolution; later display changes are saved.
 
-RC4 fixes Windows cursor/focus handoff for avatar and PP file pickers, retaining RC3’s Song Select and Raw Input corrections. See [the correction and validation report](docs/DESKTOP_FILE_PICKER_FIX.md).
+RC5 adds optional per-user Windows application registration and a stable app identity, retaining RC4’s file-picker and RC3’s input/UI corrections. This supplies Windows discovery metadata; automatic recognition by AMD/Insights remains unverified. See [Windows discovery and research](docs/WINDOWS_DISCOVERY.md).
 
-**Future updates:** open **Options â†’ Updates** to check GitHub, download a verified update and restart to install. Startup checks and beta releases can be toggled. [Update guide](docs/UPDATES.md).
+**Manual updates:** double-click **Boshsu.Updater.exe**, choose the downloaded clean ZIP plus `SHA256SUMS.txt` and the existing installation, then verify and install. This works offline and preserves player data. Older clients can use the updater extracted from the new ZIP into a separate folder. [Full guide](docs/UPDATES.md).
+
+**Future updates:** open **Options → Updates** to check GitHub, download a verified update and restart to install. Startup checks and beta releases can be toggled. [Update guide](docs/UPDATES.md).
 
 ## What is included
 

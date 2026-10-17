@@ -1,13 +1,13 @@
 {
   "Product": "Boshsu",
   "Version": "1.2",
-  "Tag": "v1.2.0-rc.4",
+  "Tag": "v1.2.0-rc.5",
   "Channel": "Prerelease",
   "Platform": "Windows x64",
   "FreshUserData": true,
   "DetailedTelemetryDefault": false,
   "AutomaticCrashUploads": false,
-  "ExeSHA256": "47b4515abc6db44e24a24a55f91ee52ff0042c1751cd21caaef9eea4b2294e27",
+  "ExeSHA256": "f118a51cd0ae3f3aeac13713731e2e4ac06a319b57b06886a124566886fc1ad5",
   "NativeSHA256": "4068114659bda93d0c2e334293d9ccb672a221d909bff0f8c65587e5738b0acd",
   "AssistModelSHA256": "b636fe27c4dc34bfd7a3dcf032b67dc9e43bc744fc80c073125fa4b57aecaa7e",
   "QualifiedAssistModelChanged": false,
@@ -15,24 +15,24 @@
   "RawInputRuntimeChecks": 105,
   "ContractAssertions": 9736,
   "BridgeChecks": 2322,
-  "UpdaterChecks": 55,
+  "UpdaterChecks": 82,
   "LiveGitHubUpdateCheck": true,
   "InClientUpdates": true,
-  "UpdaterSHA256": "01a0105d627e84e9a537edcb0a23a47119800586d7bb0a3ce18273ce1d767969",
+  "UpdaterSHA256": "5ce3f2ce011bdce4263d71096c9764423881561c8eeca2fc5103b1d79dd23e55",
   "PhysicalDeviceFeelQualified": false,
   "PublicRedistributionCertified": false,
   "LiveOnlineQualified": false,
   "Files": {
     "Boshsu-1.2-clean.zip": {
-      "SHA256": "ae5661b1d581d650577a5d9e559c473d1f2a99f65989e991edfce577624b30b8",
-      "Bytes": 161634265
+      "SHA256": "1ed5e4517ee32b511c113486230a9c7e8c7dadff01b4f088f37b90278fe449fa",
+      "Bytes": 161652150
     },
     "Boshsu-1.2-source.zip": {
-      "SHA256": "2f0ca729b82977991f4a83f5db5f8de5e6f004933ef9045de2f452fbe90d3b6c",
-      "Bytes": 131350085
+      "SHA256": "5600fdf27664bb34b0fc54467c4748ccc232f6d3cc1046ab306f59403a6a8787",
+      "Bytes": 131368231
     },
     "SHA256SUMS.txt": {
-      "SHA256": "039ccb0658c2a1a7ed430cad76913478056b87f9d6c738e85a1303e186c2a367",
+      "SHA256": "3b8154701c6f98792d1446f751fdd531b160cc5ca53b0ef1b71006659de85d99",
       "Bytes": 177
     }
   },
@@ -40,5 +40,12 @@
   "SongSelectCombinations": 25,
   "SharedRawPointerOwner": true,
   "DesktopDialogChecks": 146,
-  "DesktopModalQualified": true
+  "DesktopModalQualified": true,
+  "WindowsRegistrationChecks": 29,
+  "AutomaticRecorderRecognitionQualified": false,
+  "ManualUpdates": true,
+  "FreshZIPLaunchChecks": 13,
+  "GameplaySmokeCycles": 1,
+  "ManualUpdateE2E": true,
+  "PersonalClientAutoInstalled": false
 }
