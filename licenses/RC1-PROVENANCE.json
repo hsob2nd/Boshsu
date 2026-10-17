@@ -1,0 +1,38 @@
+[
+  {
+    "Name": "Audiowide",
+    "File": "Audiowide-Regular.ttf",
+    "Source": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/audiowide/Audiowide-Regular.ttf",
+    "License": "https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/audiowide/OFL.txt",
+    "Commit": "bd8f81ddb5c74d5c8897b36ad88b440266245103",
+    "SHA256": "c7c0f2b0f6fad8c623e31772ce79f94a4edb9321ffce9fce978ea892d20ae730",
+    "Unmodified": true
+  },
+  {
+    "Name": "Oxanium",
+    "File": "Oxanium-SemiBold.ttf",
+    "Source": "https://raw.githubusercontent.com/sevmeyer/oxanium/a8f39e0c71186190027a093e9001459410192d1e/fonts/ttf/Oxanium-SemiBold.ttf",
+    "License": "https://raw.githubusercontent.com/sevmeyer/oxanium/a8f39e0c71186190027a093e9001459410192d1e/OFL.txt",
+    "Commit": "a8f39e0c71186190027a093e9001459410192d1e",
+    "SHA256": "e2d77ec4ee67b0152166adf5d6393360550a012c2066e0d4589053e14a733cdc",
+    "Unmodified": true
+  },
+  {
+    "Name": "SpaceGrotesk",
+    "File": "SpaceGrotesk-Medium.ttf",
+    "Source": "https://raw.githubusercontent.com/floriankarsten/space-grotesk/03507d024a01282884232081fc6011c09ff4e849/fonts/ttf/static/SpaceGrotesk-Medium.ttf",
+    "License": "https://raw.githubusercontent.com/floriankarsten/space-grotesk/03507d024a01282884232081fc6011c09ff4e849/OFL.txt",
+    "Commit": "03507d024a01282884232081fc6011c09ff4e849",
+    "SHA256": "3183b7eb0b4241476360e2cd8e527868616cc16d3ce332c4376505989b772b44",
+    "Unmodified": true
+  },
+  {
+    "Name": "Orbitron",
+    "File": "Orbitron-Medium.ttf",
+    "Source": "https://raw.githubusercontent.com/theleagueof/orbitron/13e6a5222aa6818d81c9acd27edd701a2d744152/Orbitron Medium.ttf",
+    "License": "https://raw.githubusercontent.com/theleagueof/orbitron/13e6a5222aa6818d81c9acd27edd701a2d744152/Open Font License.markdown",
+    "Commit": "13e6a5222aa6818d81c9acd27edd701a2d744152",
+    "SHA256": "826f71504dfc50c8508f795b4bb5cd90f673ac55f02c8c2a97f236ba1ea68651",
+    "Unmodified": true
+  }
+]
