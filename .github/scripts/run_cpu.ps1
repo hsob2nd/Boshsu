@@ -39,6 +39,8 @@ $source=Join-Path $packages.source 'stable-remastered'
 & (Join-Path $source 'tools/Test-Release.ps1') -Runtime $packages.clean -Evidence (Join-Path $root 'release-tests')
 & python (Join-Path $source 'tools/restore_runtime_dependencies.py') --runtime $packages.clean
 if ($LASTEXITCODE -ne 0) {throw 'Pinned test dependencies could not be restored'}
-Copy-Item -LiteralPath (Join-Path $packages.clean 'osu!common.dll') -Destination (Join-Path $source 'frontend/Bosh/osu!win/bin/x64/Release/osu!common.dll')
+$hostFolder=Join-Path $source 'frontend/Bosh/osu!win/bin/x64/Release'
+New-Item -ItemType Directory -Path $hostFolder -Force | Out-Null
+Get-ChildItem -LiteralPath $packages.clean -File -Filter '*.dll' | Copy-Item -Destination $hostFolder
 & (Join-Path $source 'tools/Test-Accounts.ps1')
 Write-Output 'Portable-host contracts/navigation/update and source-compiled account/PP-provider fixtures passed. This is not an OpenGL, physical-input or complete source-build certificate.'
