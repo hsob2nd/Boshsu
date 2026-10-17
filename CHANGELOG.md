@@ -4,7 +4,16 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
-## 1.2 RC3 — Song Select skin layers and shared Raw Input (17 October 2026)
+## 1.2 RC4 — Windows file picker cursor/focus (17 October 2026)
+
+- Fixed Windows cursor visibility, clipping and fullscreen focus when choosing avatars or importing PP ZIP/JSON files.
+- Made file pickers owned by the main window; suspended game input/render ownership during their modal loop and restored it on Select, Cancel or failure.
+- Released the system cursor promptly when switching to Explorer/other desktop windows. Display/input preferences and qualified assists/PP are preserved.
+- Passed 146 picker checks, real Windows avatar/PP import interactions, 105 menu/gameplay cursor checks and existing contract/layout/updater checks.
+
+See [the correction report](docs/DESKTOP_FILE_PICKER_FIX.md).
+
+## 1.2 RC3 â€” Song Select skin layers and shared Raw Input (17 October 2026)
 
 - Removed legacy normal/hover footer buttons and other replaced chrome that could peek over the modern Song Select interface at different resolutions.
 - Preserved song rows, backgrounds, gameplay skins and intentional footer skin icons.
@@ -14,19 +23,19 @@ The latest candidate is listed first. The earlier history below runs from the pr
 
 See [the correction report](docs/INPUT_UI_FIX.md).
 
-## 1.2 RC2 — Raw Input and F9 hotfix (17 October 2026)
+## 1.2 RC2 â€” Raw Input and F9 hotfix (17 October 2026)
 
 - Fixed native Raw Input falling back to Windows cursor movement; one gameplay cursor/sensitivity owner.
 - Corrected absolute-tablet primary/virtual-screen and scaled/letterboxed viewport mapping, valid zero coordinates and button-only packet handling.
 - Prevented loading/pause/focus-loss movement from leaking into the next gameplay owner.
 - Fixed F9 opening an unsupported legacy login-only menu; repeated presses now preserve normal navigation.
-- Added Options → Updates: GitHub release checking, beta/stable preference, in-client verified downloads, cancellation and install/restart after the player clicks Update. Personal data is protected; one recovery version is kept.
+- Added Options â†’ Updates: GitHub release checking, beta/stable preference, in-client verified downloads, cancellation and install/restart after the player clicks Update. Personal data is protected; one recovery version is kept.
 - 96 real-client synthetic input/navigation checks, contract/bridge checks and qualified assist-ownership regressions passed. Physical device feel remains a user play test.
 - Matched personal/clean binaries, full source snapshot, reviewable patch, tests, release manifest and integrity checksums. Profiles/settings and qualified assists/PP rules preserved.
 
 See [the correction report](docs/RAW_INPUT_FIX.md).
 
-## 1.2 — initial clean GitHub prerelease
+## 1.2 â€” initial clean GitHub prerelease
 
 - Explicit open-source identification and license-scope documentation, including the separate terms and missing source for bundled prebuilt components.
 - Clearly labeled complete portable Windows x64 beta ZIP, alongside corresponding project/native source and integrity checksums.
@@ -45,9 +54,9 @@ See [the correction report](docs/RAW_INPUT_FIX.md).
 
 Live online compatibility, broader platform/hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
 
-## Earlier development history — oldest first
+## Earlier development history â€” oldest first
 
-### Origins: Bosh and Human Aim research — August–September 2026
+### Origins: Bosh and Human Aim research â€” Augustâ€“September 2026
 
 - Began with analysis of the supplied Bosh/stable client, its managed gameplay/input path, native dependencies and existing Aim Correction.
 - Identified the original AC capture boundary and the distinction between physical mouse/tablet input, the internal gameplay cursor and downstream hit testing.
@@ -55,17 +64,17 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Preserved original clients, source and historical evidence before experiments. Human Aim became reference evidence for later work rather than a replacement application shell.
 - Inventoried the native Bosh PP library separately from aim correction; PP calculation was not part of the cursor model.
 
-### PersonalGolden / MaxAssist foundation — 8–9 September 2026
+### PersonalGolden / MaxAssist foundation â€” 8â€“9 September 2026
 
 - Completed the isolated PersonalGolden implementation and research package through its staged model, planner, runtime and packaging gates.
 - Extracted compact, versioned movement profiles from preserved captures. Corrected their timing interpretation to sampled real time instead of treating map time as real movement duration.
 - Added deterministic movement-family selection, trajectory planning, geometry classification and target-arrival control, with cross-framework comparisons and an offline simulator.
 - Centralized Timewarp context and exposed Timewarp, compensated Reading AR, NM/DT followpoint presentation, Song Select BPM and MaxAssist settings through the existing Bosh client.
-- Expanded Reading AR to 0.0–12.0 and added fixed-angle map rotation with canonical replay-coordinate conversion.
+- Expanded Reading AR to 0.0â€“12.0 and added fixed-angle map rotation with canonical replay-coordinate conversion.
 - Integrated MaxAssist ahead of the existing AC boundary, retaining downstream correction and native hit logic.
 - Added bounded asynchronous diagnostics and preservation/package checks. Engineering gates did not substitute for normal physical-device gameplay review.
 
-### Original Bosh personal-client maintenance — September–early October 2026
+### Original Bosh personal-client maintenance â€” Septemberâ€“early October 2026
 
 - Produced separate personal and server-oriented packages sharing general compatibility fixes while retaining their distinct assistance/data policies. Historical distribution-specific strength caps were not universal Boshsu rules.
 - Improved settings failure handling, immutable-state reuse, diagnostic flushing, stale correction rejection and consistent slider geometry.
@@ -74,7 +83,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Reviewed sessions for malformed data, dropped events, overlapping sliders and late capture boundaries. Findings were preserved rather than treating every miss as an assist defect.
 - Paused old personal recording after the session review. Boshsu 1.2's one-session storage policy supersedes those earlier research logging defaults.
 
-### Ultimate Client foundation and source extraction — by 4 October 2026
+### Ultimate Client foundation and source extraction â€” by 4 October 2026
 
 - Established a pinned McOsu/McEngine gameplay foundation and inventoried the supplied Bosh frontend, personal assistance, PP wrappers, replay formats and online protocol.
 - Separated neutral gameplay context/results from Core, Online Compatibility and Personal Assistance implementations.
@@ -84,7 +93,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Initially explored separate Server/Personal targets, then consolidated the active product into **one UltimateClient** at the user's request. A separate server-only product was deferred.
 - Implemented strict public API decoding and a cancellable background online worker. Public beatmap, score and ranking reads were exercised; that did not certify login, submission or authoritative awards.
 
-### Ultimate Client's first Bosh/stable frontend — 4 October 2026
+### Ultimate Client's first Bosh/stable frontend â€” 4 October 2026
 
 - Used the supplied Bosh source as the reference for Main Menu, Song Select, Mods, Options, Pause/Fail, Results and profile presentation.
 - Bound frontend controls to existing personal/practice settings and native gameplay instead of introducing another assistance implementation.
@@ -93,7 +102,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Expanded diagnostics to identify maps, settings, runs and terminal/partial results, and improved online worker cancellation during shutdown.
 - Recorded remaining gaps in grouped selection, full settings/skin parity, replay, pause capture observations and resource qualification. This was a migration checkpoint, not a finished stable replacement.
 
-### Stable Remastered: native engine and offline accounts — initial previews through development-26
+### Stable Remastered: native engine and offline accounts â€” initial previews through development-26
 
 - Continued the Bosh/stable frontend with McOsu rendering, timing, audio, input and hit objects as the gameplay foundation.
 - Removed the separate embedded gameplay application/window model. The frontend became the owner of one process, main window, game thread, render context, message loop, swap and BASS lifecycle.
@@ -107,7 +116,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Connected selected gameplay skins and repaired health-bar fill behavior so misses visibly reduce health under the applicable gameplay policy.
 - Preserved the established MaxAssist/PersonalGolden, AC, Relax, slider and HP behavior while changing integration ownership.
 
-### Native, display and offline stabilization — through development-36, 4 October 2026
+### Native, display and offline stabilization â€” through development-36, 4 October 2026
 
 - Unified shell/native physical and logical display transforms, viewport/scissor and pointer conversion.
 - Repaired teardown ordering so native resources release before the form/context is destroyed and the host can exit its close loop cleanly.
@@ -117,7 +126,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Added local replay eligibility, ordered key-edge/clock validation, atomic saves and explicit failure reasons. Playback cannot award another score, PP or XP.
 - Added versioned offline XP/Prestige progression and per-play account/progression feedback. Version 0.2 later superseded the early progression structure with its expanded endgame design.
 
-### Version 0.1 correctness and skinning — development-37/38, 5 October 2026
+### Version 0.1 correctness and skinning â€” development-37/38, 5 October 2026
 
 - Corrected Letterboxing being mistaken for physical desktop fill. Window mode and logical presentation became separate responsibilities.
 - Repaired HUD pivots for large/full-canvas scorebars while preserving compact-bar anchors and selected-skin artwork.
@@ -127,7 +136,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Audited the installed Bosh/MaxAssist PP wrapper and documented PP-source limitations rather than inventing an equivalent implementation.
 - Reviewed user telemetry, shutdown paths, skin rendering, display modes and performance phases. Remaining replay-clock backsteps were retained as a defect for the next pass.
 
-### Version 0.1 qualification — development-39, 6 October 2026
+### Version 0.1 qualification â€” development-39, 6 October 2026
 
 - Replaced per-frame audio phase-error subtraction with an elapsed-time map clock and bounded frequency correction. Hit objects, input deadlines, snapshots and replay timestamps share the authoritative attempt clock.
 - Preserved clock epochs for pause, retry, seek and startup instead of rewriting bad replay timestamps to hide regressions.
@@ -136,9 +145,9 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Exercised 50 lifecycle cycles with skins, HUD scales, pause/retry/fail/complete/replay and shutdown.
 - Retained original player history and isolated QA data. The V0.1 engineering gate passed its recorded scope; full stable parity and public-release certification remained open.
 
-### Version 0.2: progression, worlds and Map Lab — development-40, 6 October 2026
+### Version 0.2: progression, worlds and Map Lab â€” development-40, 6 October 2026
 
-- Expanded progression to 12 normal Prestiges of 50 levels, Master 1–500, Legend 1–100, Ultimate cycles and an indefinitely advancing Complete state.
+- Expanded progression to 12 normal Prestiges of 50 levels, Master 1â€“500, Legend 1â€“100, Ultimate cycles and an indefinitely advancing Complete state.
 - Added permanent Legend XP bonuses, exact large-number storage, pinned progression curves and atomic per-attempt rewards.
 - Added one-time Top 10 improvement rewards with safeguards against ties, recalculation, replay and displacement farming rewards.
 - Separated Local, dated Server Snapshot and local Server Simulation worlds. Simulation does not submit scores or present cached standings as live global rankings.
@@ -147,7 +156,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Added the large achievement catalogue, four assistance tracks, marathon/endurance challenges, searchable collections and earned cosmetics.
 - Expanded Results with local PP/FC, Top Plays, XP, achievements, progression transitions and account deltas.
 
-### Version 0.2.1 corrective Map Lab and identity — development-44, 7 October 2026
+### Version 0.2.1 corrective Map Lab and identity â€” development-44, 7 October 2026
 
 - Corrected Map Lab to behave as beatmap authoring: generated timings, BPM, duration, sliders/spinners, breaks, audio and base CS belong to the generated difficulty.
 - Separated rated map state from runtime CS Changer, Timewarp and assistance. Selecting/generating a variant no longer changes those runtime preferences.
@@ -160,7 +169,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Repaired a real replay expiry-timing mismatch.
 - Tried a freer cursor ownership/blending layer around MaxAssist. It was later superseded by strong-reference restoration and native ownership fixes; it is not the current assist model.
 
-### Strong assist, audio and PP correction — development-45, 8 October 2026
+### Strong assist, audio and PP correction â€” development-45, 8 October 2026
 
 - Restored the intended strong MaxAssist reference behavior and qualified model/settings.
 - Fixed intro/break skips seeking audio without re-anchoring the application clock. Approved forward skips preserve the replay attempt and earlier frames.
@@ -171,7 +180,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Corrected component conversion/accuracy interactions that could reward worse accuracy, and rejected all-miss local PP awards.
 - Reviewed existing telemetry without treating harmless recovery paths or old QA failures as current gameplay crashes.
 
-### Final 0.2.x stabilization — development-46, 9 October 2026
+### Final 0.2.x stabilization â€” development-46, 9 October 2026
 
 - Made custom high-speed eligibility follow actual onset intervals and sustained rhythm density rather than requiring displayed BPM to state equivalent mechanical demand.
 - Added section diagnostics for subdivisions, density, spacing, velocity, direction changes, sliders and rhythm transitions. Subdivision labels alone do not multiply PP.
@@ -184,7 +193,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Improved measured menu loading by draining resource work within a bounded budget while retaining conservative gameplay resource work.
 - Controlled rate/CS comparisons did not justify an arbitrary new Map Lab speed multiplier or CS rebalance.
 
-### Version 0.3: interface, identity and accessibility — development-47, 9 October 2026
+### Version 0.3: interface, identity and accessibility â€” development-47, 9 October 2026
 
 - Introduced the shared Bosh design system across Main Menu, Song Select, Mods, Options, Map Lab, profiles, customization, achievements, progression, worlds and Results.
 - Replaced competing legacy bottom controls with one Song Select footer, a smaller cookie, menu actions and the player card.
@@ -195,7 +204,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Added bounded hardware-aware quality/performance profiles and background shell preparation that defers during gameplay. Presets do not select another assist strength/model.
 - Preserved the qualified native gameplay and PP behavior from stabilized 0.2.x.
 
-### Version 0.3.1: Bosh identity, animation and Results — development-48
+### Version 0.3.1: Bosh identity, animation and Results â€” development-48
 
 - Added a restrained violet/cyan/magenta language, curated vaporwave/cyber materials, moving Main Menu horizon, cookie pulse/rotation and hover/press feedback.
 - Animated selected calling cards, earned Prestige emblems and readable name effects using elapsed time. Off/Reduced/Low retain static or simplified presentations.
@@ -211,7 +220,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Added **PP only / PP + achievements / Achievements only / Off** notifications. Removed completion reminders and the redundant red Results-ready popup; progress messages defer outside gameplay/Results.
 - Reused one authoritative Assists page, improved search/grouping and modernized keybinding/skin-preview controls.
 
-### Final 0.3.x engineering pass — development-49, 10 October 2026
+### Final 0.3.x engineering pass â€” development-49, 10 October 2026
 
 - Gated native timing/profiler tools behind explicit development opt-in so ordinary shortcuts cannot accidentally activate them.
 - Repaired assist callback-rate divergence around unchanged strong mathematics and distinguished render deadlines from gameplay/input observations.
@@ -244,7 +253,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 
 ### Version 1.0.1: corrective DT/NC and score-history pass
 
-- Traced the reported near-4× DT/NC contribution to a duplicate nominal DT/NM performance ratio layered over actual-rate difficulty.
+- Traced the reported near-4Ã— DT/NC contribution to a duplicate nominal DT/NM performance ratio layered over actual-rate difficulty.
 - Removed the extra multiplier from menu, Current PP, FC and Results. DT/NC timing difficulty is represented once at actual rate; no fixed replacement reward was invented.
 - Retained normal HD/HR effects, NC equivalence and the independent configured Timewarp curve.
 - Recalculated eligible personal history under corrected captured map/mod/rate policy at the user's request, preserving results, judgments, timestamps, replay references, profile IDs, earned XP/progression/cosmetics and previous PP correction history.
@@ -269,7 +278,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Replaced Followpoint mode's slider with explicit **NM / DT timing** buttons and live persistence/selected-state feedback.
 - Applied the same scaled fade window to rendering and previous-object cutoff, preventing early disappearance at faster rates.
 
-### Native assist timing and ownership fixes — 14 October 2026
+### Native assist timing and ownership fixes â€” 14 October 2026
 
 - Confirmed that performance profiles do not set assist strength; reproduced real target-observation/ownership defects instead of adding a preset multiplier.
 - Retained still-hittable late heads on resume/reset and overlapping active sliders through a precomputed lifetime index.
@@ -281,7 +290,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Fixed queued HUD input recreating a disposed window handle during shutdown and blocked GL initialization after disposal; the corrected candidate then completed its targeted shutdown checks.
 - Preserved trajectory math, dataset, intensity and AC/Relax eligibility. No extra input thread, backdated clicks or fabricated observations were added.
 
-### Session stability foundation for 1.1 — 15 October 2026
+### Session stability foundation for 1.1 â€” 15 October 2026
 
 - Moved replay encoding/durable saves to a bounded storage worker, with immutable submissions, verified completion receipts, shutdown drain and pending-reference recovery.
 - Added cancellable/stale-safe background beatmap header/checksum/audio preparation; Play and preview use the same authoritative selection commit.
@@ -293,7 +302,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Integrated supplied Maple V1/V2/V3/VL1 references with map-clock guidance and explicit cursor priority. V2/VL1 were subsequently retired; current builds expose V1 and V3 only.
 - Added profile-owned settings and draggable numeric sliders, fine keyboard adjustment, continuous scrolling and persistence in the existing Assists interface.
 - Made MaxAssist and Maple mutually exclusive in settings and native publication; AC/Relax retain separate cooperating roles.
-- Kept V3 Power/Slider Power at 0–2 and recovered intended reference bounds elsewhere.
+- Kept V3 Power/Slider Power at 0â€“2 and recovered intended reference bounds elsewhere.
 - Fixed V3 high-power slider overshoot/oscillation, an invisible overlay intercepting drags, excessive page rebuilds and per-frame property reflection.
 - Removed deliberate yielding from active unlimited gameplay while retaining menu/background and capped pacing.
 - Disabled the legacy thread-suspending stack sampler in native gameplay after investigating a large stall; passive buffered timing remains.
@@ -305,7 +314,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Retired selectable/executable V2 and VL1 without renumbering historical data. A saved retired mode does not silently become another assist.
 - Corrected V1 AC-aware guidance geometry and stale offsets after physical movement stopped.
 - Briefly tested V1 strength 2, then corrected its final allowed maximum to **1**. V3 retains **2** for both powers; the temporary V1 range is superseded.
-- Added gameplay-only gamma 0.50–2.50 with neutral 1.00 bypass, cached render resources and no desktop gamma change. Menus/Results retain their own presentation.
+- Added gameplay-only gamma 0.50â€“2.50 with neutral 1.00 bypass, cached render resources and no desktop gamma change. Menus/Results retain their own presentation.
 
 ### Version 1.1: Akatsuki and repository ZIP import
 
@@ -338,7 +347,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Cleared credit on loading, focus loss, pause, retry, owner/map changes, rewind and resolution changes.
 - Kept Maple V3 and standalone AC/Relax behavior separate. This is a local movement policy, not anti-cheat, proof of human play or a changed submission rule.
 
-### Version 1.2: Map Lab persistence and final integration — 17 October 2026
+### Version 1.2: Map Lab persistence and final integration â€” 17 October 2026
 
 - Grouped generated variants as extra difficulties under the source map set and rebuilt discovery/grouping from saved provenance after processing, database rebuilds and restart.
 - Added source-checksum recovery after folder moves. Missing sources do not delete saved variants or invent official beatmap IDs.
@@ -350,7 +359,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Retained Bosh/Akatsuki/CCV3 modules, DT/NC-once behavior, separate Timewarp rewards, rated/runtime CS separation and HD Remover neutrality.
 - Packaged personal data separately from the fresh-user clean client; first launch uses Main Menu/native fullscreen on the primary monitor, then saves display changes.
 
-### Version 1.2: one-session diagnostic retention — 17 October 2026
+### Version 1.2: one-session diagnostic retention â€” 17 October 2026
 
 - Corrected detailed shell/gameplay diagnostics to default **Off**, including absent older preference fields. Presets do not enable recording; FPS statistics stay bounded in memory.
 - Cleared recognized previous diagnostic files once at application startup, retaining one session rather than deleting on every map/retry.
@@ -359,7 +368,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 - Disabled packaged legacy research recording and removed obsolete host/model/map-preparation traces.
 - Verified identical protected production model traces after removing initialization logging. Older standalone oracle assumptions that failed on both baselines remain documented, not relabeled as passes.
 
-### Version 1.2: clean GitHub publication — 17 October 2026
+### Version 1.2: clean GitHub publication â€” 17 October 2026
 
 - Published **v1.2.0-rc.1** with clean Windows x64 client, corresponding project/native source archive and verified SHA-256 checksums.
 - Added ten client guides plus retained license/provenance files.
@@ -372,7 +381,7 @@ Live online compatibility, broader platform/hardware qualification and public re
 
 Earlier entries describe their own checkpoint, including behavior later corrected. Current behavior is documented in the [features](docs/FEATURES.md), [assists](docs/ASSISTS.md), [PP systems](docs/PP_SYSTEMS.md) and [release status](docs/RELEASE_STATUS.md) guides.
 
-The history was checked against the original Bosh/PersonalGolden reports, Ultimate migration/UI reports, Stable Remastered native/offline/skin/replay reports, version-specific 0.1–1.2 reports and the later PP, ownership, timing, slider, AFK and storage correction records. Plans and requests alone are not recorded as completed features.
+The history was checked against the original Bosh/PersonalGolden reports, Ultimate migration/UI reports, Stable Remastered native/offline/skin/replay reports, version-specific 0.1â€“1.2 reports and the later PP, ownership, timing, slider, AFK and storage correction records. Plans and requests alone are not recorded as completed features.
 
 Evidence includes targeted fixtures, native lifecycle runs, desktop-injected interactions and player telemetry reviews. It does not certify every legacy osu! feature, physical device/display, Linux execution, end-to-end latency or zero frame spikes. Live authenticated acceptance/awards and public redistribution clearance remain outstanding. The historical Bosh PP module is prebuilt; its implementation source is unavailable.
 
