@@ -1,0 +1,28 @@
+{
+  "Product": "Boshsu",
+  "Version": "1.2",
+  "Tag": "v1.2.0-rc.1",
+  "Channel": "Prerelease",
+  "Platform": "Windows x64",
+  "FreshUserData": true,
+  "DetailedTelemetryDefault": false,
+  "AutomaticCrashUploads": false,
+  "EmbeddedCrashReportingCredential": false,
+  "GameplayChanges": false,
+  "Files": {
+    "Boshsu-1.2-clean.zip": {
+      "SHA256": "2cac9ab53e89d6771b20da4c7feaf415d00ab735df557e2614f3757a4100c7a8",
+      "Bytes": 161642230
+    },
+    "Boshsu-1.2-source.zip": {
+      "SHA256": "fd76917506404cbcc4ba3625de3152d027257d236619264c4c64175a8db11430",
+      "Bytes": 131294691
+    }
+  },
+  "ExeSHA256": "c840d05d7b999def43b5d8f5cd105e4119944336b296fcc3e4f47c08132a2ba6",
+  "StartupChecks": 8,
+  "RestartChecks": 5,
+  "LocalErrorChecks": 8,
+  "PublicRedistributionCertified": false,
+  "LiveOnlineQualified": false
+}
