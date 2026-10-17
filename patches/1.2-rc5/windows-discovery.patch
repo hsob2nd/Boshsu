@@ -164,6 +164,16 @@
              string balanceWarning=V02Configuration.Load(AppDomain.CurrentDomain.BaseDirectory);
              pWebRequest.AllowRequest=url=>Accounts?.Mode==StableRemastered.Accounts.AccountMode.Server && !shuttingDown;
              Online=new DevelopmentOnlineCompatibility();Gameplay = new McOsuGameplayEngine();
+--- a/stable-remastered/application/ClientIntegration.projitems
++++ b/stable-remastered/application/ClientIntegration.projitems
+@@ -14,6 +14,6 @@
+     <Compile Include="$(MSBuildThisFileDirectory)..\personal\Bosh.Compatibility\*.cs" />
+   </ItemGroup>
+   <Target Name="BuildBoshsuUpdater" AfterTargets="Build">
+-    <Csc Sources="$(MSBuildThisFileDirectory)..\contracts\ClientUpdatePackage.cs;$(MSBuildThisFileDirectory)..\tools\ClientUpdater\Program.cs" OutputAssembly="$(TargetDir)Boshsu.Updater.exe" TargetType="winexe" Platform="x64" LangVersion="7.3" References="System.dll;System.Core.dll;System.Windows.Forms.dll;System.IO.Compression.dll;System.IO.Compression.FileSystem.dll;$(TargetDir)Newtonsoft.Json.dll" />
++    <Csc Sources="$(MSBuildThisFileDirectory)..\contracts\ClientUpdatePackage.cs;$(MSBuildThisFileDirectory)..\tools\ClientUpdater\Program.cs" OutputAssembly="$(TargetDir)Boshsu.Updater.exe" TargetType="winexe" Platform="x64" LangVersion="7.3" References="System.dll;System.Core.dll;System.Drawing.dll;System.Windows.Forms.dll;System.IO.Compression.dll;System.IO.Compression.FileSystem.dll;$(TargetDir)Newtonsoft.Json.dll" />
+   </Target>
+ </Project>
 --- a/stable-remastered/application/Shell/ShellWindowsIntegration.cs
 +++ b/stable-remastered/application/Shell/ShellWindowsIntegration.cs
 @@ -0,0 +1,24 @@
@@ -809,6 +819,87 @@
          static readonly Regex Version=new Regex(@"^v?(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$",RegexOptions.CultureInvariant);
          public static int Compare(string a,string b)
          {
+@@ -56,7 +56,7 @@
+         }
+         public static Dictionary<string,string> Verify(string archive,string expectedHash,string tag)
+         {
+-            if(!Regex.IsMatch(expectedHash??"",@"^[0-9a-f]{64}$")||Hash(archive)!=expectedHash)throw new InvalidDataException("Update checksum did not match GitHub.");
++            if(!Regex.IsMatch(expectedHash??"",@"^[0-9a-f]{64}$")||Hash(archive)!=expectedHash)throw new InvalidDataException("Update checksum did not match the expected release checksum.");
+             ClientRelease.Compare(tag,ClientRelease.Tag);
+             using(var z=ZipFile.OpenRead(archive)){
+                 if(z.Entries.Count>12000||z.Entries.Sum(e=>e.Length)>2L*1024*1024*1024)throw new InvalidDataException("Update package exceeds its limits.");
+@@ -75,6 +75,71 @@
+                 if(hashes.Count!=z.Entries.Count(e=>!e.FullName.EndsWith("/"))-1)throw new InvalidDataException("Update manifest contains unexpected files.");
+                 return hashes;
+             }
++        }
++        // The same verified, data-preserving installer is used by both entry points.
++        public static UpdateJob PrepareManual(string root,string archive,string checksumFile)
++        {
++            root=Path.GetFullPath(root);archive=Path.GetFullPath(archive);
++            string current=InstalledTag(root),tag;
++            using(var z=ZipFile.OpenRead(archive)){
++                var metadata=z.GetEntry("BOSHSU_BUILD.json");
++                if(metadata==null||metadata.Length>65536)throw new InvalidDataException("Choose the complete Boshsu clean client ZIP, not the source archive.");
++                using(var r=new StreamReader(metadata.Open()))tag=ReadTag(r.ReadToEnd());
++            }
++            if(ClientRelease.Compare(tag,current)<0)throw new InvalidDataException("This package is older than the installed client. Downgrades are not supported.");
++            if(new FileInfo(checksumFile).Length>65536)throw new InvalidDataException("Checksum file exceeds its limit.");
++            string hash=ReadChecksum(File.ReadAllText(checksumFile),Path.GetFileName(archive));
++            Verify(archive,hash,tag);
++            return new UpdateJob{Root=root,Archive=archive,SHA256=hash,Tag=tag};
++        }
++        public static string ReadChecksum(string text,string filename)
++        {
++            if(text==null||text.Length>65536||string.IsNullOrEmpty(filename)||filename!=Path.GetFileName(filename))throw new InvalidDataException("Invalid checksum file or package name.");
++            string result=null;
++            foreach(string line in text.Split('\n')){
++                var match=Regex.Match(line.TrimEnd('\r'),@"^([a-fA-F0-9]{64}) [ *](.+)$");
++                if(!match.Success||!string.Equals(match.Groups[2].Value,filename,StringComparison.OrdinalIgnoreCase))continue;
++                if(result!=null)throw new InvalidDataException("Checksum file contains duplicate package entries.");
++                result=match.Groups[1].Value.ToLowerInvariant();
++            }
++            if(result==null)throw new InvalidDataException("SHA256SUMS.txt has no checksum for the selected ZIP. Download both files from the same official Boshsu release.");
++            return result;
++        }
++        static string ReadTag(string text)
++        {
++            var metadata=JObject.Parse(text);
++            string tag=(string)metadata["ReleaseTag"];
++            if((string)metadata["Product"]!="Boshsu")throw new InvalidDataException("The selected folder or package is not a Boshsu release.");
++            ClientRelease.Compare(tag,ClientRelease.Tag);return tag;
++        }
++        public static string InstalledTag(string root)
++        {
++            root=Path.GetFullPath(root);string build=Path.Combine(root,"BOSHSU_BUILD.json");
++            if(Path.GetPathRoot(root).TrimEnd('\\')==root.TrimEnd('\\')||!File.Exists(Path.Combine(root,"Boshsu.exe"))||!File.Exists(build)||new FileInfo(build).Length>65536)throw new InvalidDataException("Select Boshsu.exe in the existing installation you want to update.");
++            PlainDirectory(root,build);return ReadTag(File.ReadAllText(build));
++        }
++        public static string StageManual(UpdateJob job,string helperDirectory,int parentId)
++        {
++            // Run a copy so the installed updater can itself be replaced safely.
++            InstalledTag(job.Root);
++            string directory=Path.Combine(Path.GetFullPath(job.Root),"Updates","manual-"+Guid.NewGuid().ToString("N"));
++            PlainDirectory(job.Root,Path.Combine(directory,"job.json"));Directory.CreateDirectory(directory);
++            try{
++                foreach(string name in new[]{"Boshsu.Updater.exe","Newtonsoft.Json.dll"})File.Copy(Path.Combine(helperDirectory,name),Path.Combine(directory,name));
++                job.ParentId=parentId;
++                File.WriteAllText(Path.Combine(directory,"job.json"),JsonConvert.SerializeObject(job));
++                foreach(string previous in Directory.GetDirectories(Path.Combine(job.Root,"Updates"),"manual-*")){
++                    if(previous==directory||string.Equals(Path.GetFullPath(previous).TrimEnd('\\'),Path.GetFullPath(helperDirectory).TrimEnd('\\'),StringComparison.OrdinalIgnoreCase)||!Regex.IsMatch(Path.GetFileName(previous),@"^manual-[a-f0-9]{32}$"))continue;
++                    string marker=Path.Combine(previous,"job.json");
++                    try{
++                        PlainDirectory(job.Root,marker);
++                        if(!File.Exists(marker)||new FileInfo(marker).Length>65536||Directory.GetDirectories(previous).Length!=0||Directory.GetFiles(previous).Any(p=>!new[]{"job.json","Boshsu.Updater.exe","Newtonsoft.Json.dll"}.Contains(Path.GetFileName(p),StringComparer.OrdinalIgnoreCase)))continue;
++                        var old=JsonConvert.DeserializeObject<UpdateJob>(File.ReadAllText(marker));
++                        if(old!=null&&string.Equals(Path.GetFullPath(old.Root),Path.GetFullPath(job.Root),StringComparison.OrdinalIgnoreCase))RemoveOwnedDirectory(job.Root,previous);
++                    }catch(Exception error) when(error is IOException||error is UnauthorizedAccessException||error is JsonException||error is ArgumentException){ /* An active helper or an unrecognised directory is retained. */ }
++                }
++                return directory;
++            }catch{RemoveOwnedDirectory(job.Root,directory);throw;}
+         }
+         public static void Install(UpdateJob job,Action<int> afterFile=null)
+         {
 --- a/stable-remastered/frontend/Bosh/osu!/Framework/Compatibility/Windows/WindowsGameForm.cs
 +++ b/stable-remastered/frontend/Bosh/osu!/Framework/Compatibility/Windows/WindowsGameForm.cs
 @@ -23,6 +23,9 @@
@@ -907,9 +998,185 @@
 +        finally{Registry.CurrentUser.DeleteSubKeyTree(key,false);}
 +    }
 +}
+--- a/stable-remastered/tests/ClientUpdateTests.cs
++++ b/stable-remastered/tests/ClientUpdateTests.cs
+@@ -54,6 +54,39 @@
+         ClientUpdatePackage.Install(job);Check(File.ReadAllText(Path.Combine(install,"Boshsu.exe"))=="new application","Application updated");
+         foreach(var p in personal)Check(File.ReadAllText(Path.Combine(install,p.Key))==p.Value,"Update preserved "+p.Key);
+         Check(Directory.GetDirectories(Path.Combine(install,"Updates"),"rollback-*").Length==1,"One recovery version retained");ClientUpdatePackage.Install(job);Check(Directory.GetDirectories(Path.Combine(install,"Updates"),"rollback-*").Length==1,"Recovery storage remains bounded");Check(Directory.GetDirectories(Path.Combine(install,"Updates"),"stage-*").Length==0,"Staging resources released");
++        string checksum=Path.Combine(root,"SHA256SUMS.txt"),hash=ClientUpdatePackage.Hash(good);
++        File.WriteAllText(checksum,hash+"  "+Path.GetFileName(good)+"\n");
++        var manual=ClientUpdatePackage.PrepareManual(install,good,checksum);
++        Check(manual.Root==install&&manual.Archive==good&&manual.SHA256==hash&&manual.Tag=="v1.2.0-rc.3","Manual ZIP selects the same complete package and target");
++        Check(ClientUpdatePackage.ReadChecksum(hash.ToUpperInvariant()+" *"+Path.GetFileName(good)+"\r\n",Path.GetFileName(good))==hash,"Binary checksums / uppercase / CRLF supported");
++        Reject(()=>ClientUpdatePackage.ReadChecksum(hash+"  other.zip\n",Path.GetFileName(good)),"Wrong checksum filename");
++        Reject(()=>ClientUpdatePackage.ReadChecksum(hash+"  good.zip\n"+hash+"  good.zip\n","good.zip"),"Duplicate checksum entries");
++        Reject(()=>ClientUpdatePackage.ReadChecksum(new string('a',65537),"good.zip"),"Oversized checksum input");
++        Reject(()=>ClientUpdatePackage.ReadChecksum("missing","good.zip"),"Missing checksum input");
++        File.WriteAllText(checksum,new string('0',64)+"  good.zip\n");Reject(()=>ClientUpdatePackage.PrepareManual(install,good,checksum),"Manual corrupt package digest");
++        File.WriteAllText(checksum,hash+"  good.zip\n");
++        File.WriteAllText(Path.Combine(install,"BOSHSU_BUILD.json"),JsonConvert.SerializeObject(new{Product="Boshsu",ReleaseTag="v1.2.0-rc.2"}));
++        Check(ClientUpdatePackage.PrepareManual(install,good,checksum).Tag=="v1.2.0-rc.3","Manual upgrade accepted");
++        File.WriteAllText(Path.Combine(install,"BOSHSU_BUILD.json"),JsonConvert.SerializeObject(new{Product="Boshsu",ReleaseTag="v1.2.0-rc.4"}));
++        Reject(()=>ClientUpdatePackage.PrepareManual(install,good,checksum),"Manual downgrade rejected");
++        File.WriteAllText(Path.Combine(install,"BOSHSU_BUILD.json"),JsonConvert.SerializeObject(new{Product="Other",ReleaseTag="v1.2.0-rc.2"}));
++        Reject(()=>ClientUpdatePackage.PrepareManual(install,good,checksum),"Foreign installation rejected");
++        File.WriteAllText(Path.Combine(install,"BOSHSU_BUILD.json"),JsonConvert.SerializeObject(new{Product="Boshsu",ReleaseTag="v1.2.0-rc.2"}));
++        string source=Path.Combine(root,"source.zip");using(var z=ZipFile.Open(source,ZipArchiveMode.Create))using(var w=new StreamWriter(z.CreateEntry("source.cs").Open()))w.Write("source");
++        Reject(()=>ClientUpdatePackage.PrepareManual(install,source,checksum),"Source ZIP cannot be installed");
++        Reject(()=>ClientUpdatePackage.PrepareManual(root,good,checksum),"Non-installation target rejected");
++        string helper=Path.Combine(root,"helper");Directory.CreateDirectory(helper);File.WriteAllText(Path.Combine(helper,"Boshsu.Updater.exe"),"helper fixture");File.WriteAllText(Path.Combine(helper,"Newtonsoft.Json.dll"),"dependency fixture");
++        string staged=ClientUpdatePackage.StageManual(manual,helper,123);
++        var stagedJob=JsonConvert.DeserializeObject<UpdateJob>(File.ReadAllText(Path.Combine(staged,"job.json")));
++        Check(stagedJob.ParentId==123&&stagedJob.SHA256==hash&&stagedJob.Root==install,"Manual helper waits for its launching updater");
++        Check(File.ReadAllText(Path.Combine(staged,"Boshsu.Updater.exe"))=="helper fixture"&&staged!=helper,"Updater runs outside the files it replaces");
++        string second=ClientUpdatePackage.StageManual(manual,helper,124);
++        Check(second!=staged&&!Directory.Exists(staged)&&Directory.GetDirectories(Path.Combine(install,"Updates"),"manual-*").Length==1,"Completed manual helper storage bounded");
++        string unowned=Path.Combine(install,"Updates","manual-player-data");Directory.CreateDirectory(unowned);File.WriteAllText(Path.Combine(unowned,"mine.txt"),"keep");
++        ClientUpdatePackage.StageManual(manual,helper,125);Check(File.ReadAllText(Path.Combine(unowned,"mine.txt"))=="keep","Unowned update folders retained");
++        Reject(()=>ClientUpdatePackage.StageManual(manual,root,126),"Missing updater helper refused");
++        Check(Directory.GetDirectories(Path.Combine(install,"Updates"),"manual-*").Length==2,"Failed helper preparation cleaned up");
++        ClientUpdatePackage.Install(manual);foreach(var p in personal)Check(File.ReadAllText(Path.Combine(install,p.Key))==p.Value,"Manual update preserved "+p.Key);
+         File.WriteAllText(Path.Combine(root,"UPDATER_TESTS.json"),JsonConvert.SerializeObject(new{Passed=true,Checks=checks,PlayerDataUsed=false,NetworkUsed=false,Tests="Release selection, digest/manifest/identity/path validation, protected data, transactional rollback, bounded recovery"},Formatting.Indented));Console.WriteLine(checks+" updater checks passed");
+     }
+ }
+--- a/stable-remastered/tools/ClientUpdater/Program.cs
++++ b/stable-remastered/tools/ClientUpdater/Program.cs
+@@ -1,23 +1,88 @@
+ using System;
+ using System.IO;
+ using System.Diagnostics;
++using System.Threading.Tasks;
++using System.Drawing;
+ using System.Windows.Forms;
+ using Newtonsoft.Json;
+ using StableRemastered.Updates;
++
+ class BoshsuUpdater
+ {
++    internal static void RequireClosed(string root)
++    {
++        string executable=Path.GetFullPath(Path.Combine(root,"Boshsu.exe"));
++        foreach(var process in Process.GetProcessesByName("Boshsu"))using(process){
++            if(!process.HasExited&&string.Equals(process.MainModule.FileName,executable,StringComparison.OrdinalIgnoreCase))
++                throw new IOException("Close Boshsu in the selected folder before installing. Your running client has not been changed.");
++        }
++    }
+     [STAThread]static int Main(string[] args)
+     {
++        if(args.Length==0){Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);Application.Run(new ManualUpdateForm());return 0;}
+         UpdateJob job=null;bool restart=false;
+         try{
+-            if(args.Length!=1||Path.GetFullPath(args[0])!=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"job.json"))return 2;
++            if(args.Length!=1||Path.GetFullPath(args[0])!=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"job.json"))throw new InvalidDataException("Launch Boshsu.Updater.exe without arguments for a manual update.");
++            if(new FileInfo(args[0]).Length>65536)throw new InvalidDataException("Invalid update job.");
+             job=JsonConvert.DeserializeObject<UpdateJob>(File.ReadAllText(args[0]));
++            if(job==null||job.ParentId<=0||job.ParentId==Process.GetCurrentProcess().Id)throw new InvalidDataException("Invalid update job.");
+             try{using(var parent=Process.GetProcessById(job.ParentId))if(!parent.WaitForExit(120000))throw new IOException("Boshsu is still running. The update was not applied.");}catch(ArgumentException){}
++            RequireClosed(job.Root);
+             ClientUpdatePackage.Install(job);restart=true;
+             File.WriteAllText(Path.Combine(job.Root,"Updates","last-update.txt"),"Installed "+job.Tag+" at "+DateTime.UtcNow.ToString("O"));return 0;
+         }catch(Exception error){
+             if(job!=null)try{File.WriteAllText(Path.Combine(job.Root,"Updates","last-update.txt"),error.ToString());}catch{}
+             MessageBox.Show("The update could not finish. Existing files were restored where possible. See Updates/last-update.txt and the rollback folder.\n\n"+error.Message,"Boshsu update",MessageBoxButtons.OK,MessageBoxIcon.Error);return 1;
+-        }finally{if(restart)try{Process.Start(new ProcessStartInfo(Path.Combine(job.Root,"Boshsu.exe")){WorkingDirectory=job.Root});}catch{}}
++        }finally{if(restart)try{Process.Start(new ProcessStartInfo(Path.Combine(job.Root,"Boshsu.exe")){WorkingDirectory=job.Root});}catch(Exception error){MessageBox.Show("The update was installed. Open Boshsu.exe manually.\n\n"+error.Message,"Boshsu update",MessageBoxButtons.OK,MessageBoxIcon.Information);}}
+     }
+ }
++
++sealed class ManualUpdateForm : Form
++{
++    readonly TextBox installation=new TextBox(),archive=new TextBox(),checksums=new TextBox();
++    readonly Button install=new Button{Text="Verify && install"};
++    readonly Label status=new Label{AutoSize=false};
++    bool busy;
++    public ManualUpdateForm()
++    {
++        Text="Boshsu manual update";ClientSize=new Size(640,330);MinimumSize=Size;FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;AutoScaleMode=AutoScaleMode.Dpi;
++        var intro=new Label{Text="Update an existing Boshsu folder using the complete release ZIP and SHA256SUMS.txt.\nFirst-time player? Extract the whole client ZIP and launch Boshsu.exe instead.",AutoSize=false,Bounds=new Rectangle(18,16,604,48)};Controls.Add(intro);
++        AddField("Existing Boshsu.exe",installation,72,"Boshsu.exe|Boshsu.exe",false);
++        AddField("Downloaded clean ZIP",archive,126,"Boshsu client ZIP|*.zip",true);
++        AddField("Release checksums",checksums,180,"SHA256SUMS.txt|*.txt",false);
++        string current=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"Boshsu.exe");if(File.Exists(current))installation.Text=current;
++        status.SetBounds(18,239,604,40);status.Text="Use downloads from github.com/hsob2nd/Boshsu only. Checksums check integrity; they are not a publisher signature.";Controls.Add(status);
++        install.SetBounds(462,284,160,30);install.Click+=Install;Controls.Add(install);
++        var close=new Button{Text="Close",Bounds=new Rectangle(18,284,100,30)};close.Click+=(s,e)=>Close();Controls.Add(close);
++        FormClosing+=(s,e)=>{if(busy)e.Cancel=true;};
++    }
++    void AddField(string title,TextBox field,int y,string filter,bool package)
++    {
++        Controls.Add(new Label{Text=title,AutoSize=true,Location=new Point(18,y)});
++        field.SetBounds(18,y+20,490,24);field.ReadOnly=true;Controls.Add(field);
++        var browse=new Button{Text="Choose…",Bounds=new Rectangle(518,y+18,104,28)};
++        browse.Click+=(s,e)=>{using(var picker=new OpenFileDialog{Title=title,Filter=filter,CheckFileExists=true,RestoreDirectory=true}){
++            if(File.Exists(field.Text))picker.FileName=field.Text;
++            if(picker.ShowDialog(this)!=DialogResult.OK)return;field.Text=picker.FileName;
++            if(package){string adjacent=Path.Combine(Path.GetDirectoryName(picker.FileName),"SHA256SUMS.txt");checksums.Text=File.Exists(adjacent)?adjacent:"";}
++        }};Controls.Add(browse);
++    }
++    async void Install(object sender,EventArgs e)
++    {
++        if(busy)return;
++        busy=true;foreach(Control control in Controls)if(control is Button)control.Enabled=false;
++        try{
++            if(!File.Exists(installation.Text)||!File.Exists(archive.Text)||!File.Exists(checksums.Text))throw new InvalidDataException("Choose the existing Boshsu.exe, the complete clean ZIP and its SHA256SUMS.txt.");
++            string root=Path.GetDirectoryName(installation.Text),zip=archive.Text,sums=checksums.Text;
++            BoshsuUpdater.RequireClosed(root);status.Text="Verifying the release and all application files…";
++            var job=await Task.Run(()=>ClientUpdatePackage.PrepareManual(root,zip,sums));
++            BoshsuUpdater.RequireClosed(root);status.Text="Verified "+job.Tag+". Ready to update.";
++            if(MessageBox.Show(this,"Install "+job.Tag+" to:\n"+root+"\n\nProfiles, scores, maps, skins and settings are kept. Boshsu will open when installation finishes.","Install Boshsu update",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
++            BoshsuUpdater.RequireClosed(root);
++            string staged=ClientUpdatePackage.StageManual(job,AppDomain.CurrentDomain.BaseDirectory,Process.GetCurrentProcess().Id);
++            Process.Start(new ProcessStartInfo(Path.Combine(staged,"Boshsu.Updater.exe"),"\""+Path.Combine(staged,"job.json")+"\""){UseShellExecute=false,WorkingDirectory=staged,CreateNoWindow=true});
++            busy=false;Close();
++        }catch(Exception error){status.Text="Update was not applied.";MessageBox.Show(this,error.Message,"Boshsu manual update",MessageBoxButtons.OK,MessageBoxIcon.Error);}
++        finally{busy=false;foreach(Control control in Controls)if(control is Button)control.Enabled=true;}
++    }
++}
+--- a/stable-remastered/tools/ClientUpdater/UPDATES.md
++++ b/stable-remastered/tools/ClientUpdater/UPDATES.md
+@@ -0,0 +1,27 @@
++# Installing and updating Boshsu
++
++## First-time download
++
++Download `Boshsu-1.2-clean.zip` from the official Releases page, extract the **whole ZIP** into a writable folder, then open **Boshsu.exe**. Do not run an executable inside the ZIP. Keep all included DLLs and resource folders together. Windows x64 and .NET Framework 4.8 are required; build tools and a separate PP calculator are not required. The source ZIP is for developers, not for playing.
++
++The client creates a fresh local profile. Maps and custom skins are not bundled; select your library in Options. First launch uses Main Menu, primary display, native resolution and fullscreen; your later changes are saved.
++
++## Manual update, without the client updater or an internet connection
++
++1. Download `Boshsu-1.2-clean.zip` **and `SHA256SUMS.txt` from the same official release**. Keep their original filenames together.
++2. Close the Boshsu installation you want to update.
++3. Double-click **Boshsu.Updater.exe** in your existing installation. If it predates RC5, extract the new complete ZIP into a separate folder and open its updater instead.
++4. Choose **Boshsu.exe in your existing installation**, the downloaded clean ZIP and its checksums file. The adjacent checksums file is selected automatically when available.
++5. Click **Verify & install**, review the target folder/version, then confirm. The updater runs a separate copy, replaces application files and opens Boshsu again.
++
++This manual path performs no network requests and requires no GitHub login. Checksums detect corruption; a locally supplied checksum file is **not** an authenticated publisher signature, so obtain both downloads from the official repository. Source ZIPs, missing/mismatched checksums, unsafe files and older versions are rejected. The target client must be closed; the updater does not kill it. Updating an unrelated copy is allowed while your other copy remains open.
++
++## In-client updates
++
++Open **Options → Updates**, or search **updates** with Ctrl K. Check, enable beta releases for RC builds, download, then click **Restart & install** when ready. Startup checking is optional. The client verifies the GitHub SHA-256 asset digest and drains saves before closing. RC1 predates this updater; install a complete current portable package once to obtain it.
++
++## Data preservation and recovery
++
++Both update paths use the same complete-package identity, file-manifest and safe-path validation. They replace application files only. Profiles, scores, progression, avatars, maps, skins, settings, replays, generated Map Lab difficulties and custom PP providers remain in place. One previous application version is retained under `Updates/rollback-*`; failed installation attempts to restore replaced files. `Updates/last-update.txt` records the outcome. Manual helper storage is pruned on later preparation; active/unrecognised folders are retained. Back up personal data before any update or move.
++
++No silent update, forced restart, forced process closure, administrator request or credential upload is performed. Offline play does not require update connectivity. If files are locked, space is insufficient or permission is denied, keep your existing installation and inspect the outcome/recovery folder. Report reproducible issues without uploading private accounts, configurations or unreviewed logs.
+--- a/stable-remastered/tools/v12_source_archive.py
++++ b/stable-remastered/tools/v12_source_archive.py
+@@ -21,7 +21,7 @@
+     if not p.is_file() or any(part in excluded for part in rel.parts):continue
+     if p.suffix.lower() in skip_suffix and p.name not in ('packages.config','app.config','NuGet.Config','nuget.config'):continue
+     if root==R and len(rel.parts)==1 and p.name not in ('CMakeLists.txt','StableRemastered.sln','Directory.Build.props','NuGet.Config','README.md','LICENSE'):continue
+-    if p.suffix.lower()=='.md' and not (p.name.upper().startswith(('README','LICENSE','THIRD_PARTY','BUILD')) or p.name in ('PP_PROVIDER_API.md','PP_AUTHORING_QUICKSTART.md')):continue
++    if p.suffix.lower()=='.md' and not (p.name.upper().startswith(('README','LICENSE','THIRD_PARTY','BUILD')) or p.name in ('PP_PROVIDER_API.md','PP_AUTHORING_QUICKSTART.md','UPDATES.md')):continue
+     name=prefix+'/'+rel.as_posix();z.write(p,name);files[name]=sha(p)
+   model=R.parent/'artifacts/v12/release/personal-golden-qualified.pgold';z.write(model,'qualified-model/personal-golden-qualified.pgold');files['qualified-model/personal-golden-qualified.pgold']=sha(model)
+   z.writestr('SOURCE_README.txt','Boshsu 1.2 source snapshot\n\nIncludes the supplied Bosh frontend, application/contracts/providers, modified McOsu gameplay sources, original McEngine source, tests, build scripts and licensed bundled fonts.\nStart with stable-remastered/CMakeLists.txt, StableRemastered.sln and tools/Build-Engine.ps1. The source layout retains the upstream McEngine path used by the build. Use Windows x64, .NET Framework 4.8 build tools, CMake/Ninja/MinGW and the pinned dependency versions described by the project. Restore managed packages from their pinned project/package manifests.\nRuntime binary dependencies and supplied assets remain in the client package; this archive excludes build outputs, personal accounts, telemetry, maps and credentials. Historical Bosh PP is a supplied prebuilt module; its implementation source/redistribution provenance is not available here. Public distribution remains subject to the unresolved supplied-asset/runtime provenance recorded in RELEASE_STATUS.md. GPL/MIT/OFL notices are retained.\n')
 --- a/stable-remastered/tools/package_windows_discovery.py
 +++ b/stable-remastered/tools/package_windows_discovery.py
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,90 @@
 +"""Build checked, fresh-data RC5 assets from the sealed RC4 package."""
 +from pathlib import Path
 +import json,shutil,hashlib,zipfile,difflib,re,importlib.util,sys,subprocess
@@ -917,11 +1184,14 @@
 +def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 +def write(p,d):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(d,indent=2)+'\n',encoding='utf-8')
 +registration=json.loads((E/'isolated/summary.json').read_text());assert registration['Passed'] and registration['Checks']==29
++for name in ('FIRST_LAUNCH.json','SAVED_RESTART.json','GAMEPLAY_SMOKE.json','MANUAL_UPDATE_E2E.json'):assert json.loads((E/name).read_text(encoding='utf-8-sig'))['Passed'],name
 +assert 'osu!win ->' in (E/'managed-build.log').read_text(encoding='utf-8-sig')
 +assert not A.exists();A.mkdir();C=A/'client';repo=A/'repo';shutil.copytree(BASE/'repo',repo)
 +with zipfile.ZipFile(BASE/'release-assets/Boshsu-1.2-clean.zip') as z:z.extractall(C)
 +output=R/'frontend/Bosh/osu!win/bin/x64/Release'
 +for source,name in [(output/'StableRemastered.exe','Boshsu.exe'),(output/'Boshsu.Updater.exe','Boshsu.Updater.exe'),(R/'STABLE_REMASTERED_WINDOWS_DISCOVERY_REPORT.md','STABLE_REMASTERED_WINDOWS_DISCOVERY_REPORT.md')]:shutil.copy2(source,C/name)
++shutil.copy2(R/'tools/ClientUpdater/UPDATES.md',C/'BOSHSU_UPDATES.md')
++with (C/'README.txt').open('a',encoding='utf-8') as f:f.write('\nManual updates\nDouble-click Boshsu.Updater.exe, choose the existing installation and the downloaded clean ZIP plus SHA256SUMS.txt from the same official release, then verify and install. See BOSHSU_UPDATES.md. For first-time installation, run Boshsu.exe instead.\n')
 +for n in ('StableRemasteredGameplay.dll','UltimatePersonalModel.dll','personal-golden-qualified.pgold'):
 + assert sha(C/n)==sha(BASE/'client'/n),n
 +V=A/'validation';V.mkdir()
@@ -936,27 +1206,30 @@
 +write(E/'REGRESSIONS.json',dict(Passed=True,Results=results))
 +report=(R/'STABLE_REMASTERED_WINDOWS_DISCOVERY_REPORT.md').read_text(encoding='utf-8')
 +(repo/'docs/WINDOWS_DISCOVERY.md').write_text(report,encoding='utf-8')
++shutil.copy2(R/'tools/ClientUpdater/UPDATES.md',repo/'docs/UPDATES.md')
 +p=repo/'README.md';s=p.read_text(encoding='utf-8').replace('v1.2.0-rc.4',TAG).replace('Current client: 1.2 RC4','Current client: 1.2 RC5')
 +s=s.replace('RC4 fixes Windows cursor/focus handoff for avatar and PP file pickers, retaining RC3’s Song Select and Raw Input corrections. See [the correction and validation report](docs/DESKTOP_FILE_PICKER_FIX.md).','RC5 adds optional per-user Windows application registration and a stable app identity, retaining RC4’s file-picker and RC3’s input/UI corrections. This supplies Windows discovery metadata; automatic recognition by AMD/Insights remains unverified. See [Windows discovery and research](docs/WINDOWS_DISCOVERY.md).')
 +p.write_text(s,encoding='utf-8')
-+p=repo/'CHANGELOG.md';s=p.read_text(encoding='utf-8');s=s.replace('## 1.2 RC4','''## 1.2 RC5 — Windows application discovery (17 October 2026)
++p=repo/'README.md';s=p.read_text(encoding='utf-8').replace('**Future updates:**','**Manual updates:** double-click **Boshsu.Updater.exe**, choose the downloaded clean ZIP plus `SHA256SUMS.txt` and the existing installation, then verify and install. This works offline and preserves player data. Older clients can use the updater extracted from the new ZIP into a separate folder. [Full guide](docs/UPDATES.md).\n\n**Future updates:**');p.write_text(s,encoding='utf-8')
++p=repo/'CHANGELOG.md';s=p.read_text(encoding='utf-8');s=s.replace('## 1.2 RC4','''## 1.2 RC5 — Windows discovery and manual updates (17 October 2026)
 +
 +- Added a stable Windows AppUserModelID before UI startup and a Boshsu window name from construction.
 +- Added per-user App Paths / Applications registration and a matching Start-menu shortcut on packaged-client startup.
 +- Added Options → Advanced → Windows integration with saved opt-out, status, repair and search access.
++- Added a standalone manual-update window: double-click Boshsu.Updater.exe, choose the existing installation, downloaded clean ZIP and release checksums. Verification runs off the UI thread, preserves player data, refuses downgrades/running targets and starts a separate installer copy.
 +- Preserved foreign registrations and prevented an older copy from removing a newer copy's entries. Source/test hosts skip persistent registration.
 +- Passed 29 non-GUI Windows registration checks and the existing contract/bridge/shell/updater checks. Automatic AMD/Insights recognition and recording remain unverified; Windows registration is not a recorder-catalogue API.
 +
 +See [the implementation and research report](docs/WINDOWS_DISCOVERY.md).
 +
 +## 1.2 RC4''',1);p.write_text(s,encoding='utf-8')
-+names=['application/WindowsApplicationIdentity.cs','application/Program.cs','application/ApplicationServices.cs','application/Shell/ShellWindowsIntegration.cs','application/Shell/ShellSettingsPage.cs','application/Shell/ShellPresentation.cs','application/Shell/ShellClientUpdates.cs','contracts/ShellDesign.cs','contracts/ClientUpdatePackage.cs','frontend/Bosh/osu!/Framework/Compatibility/Windows/WindowsGameForm.cs','tests/WindowsDiscoveryTests.cs','tools/package_windows_discovery.py']
++names=['application/WindowsApplicationIdentity.cs','application/Program.cs','application/ApplicationServices.cs','application/ClientIntegration.projitems','application/Shell/ShellWindowsIntegration.cs','application/Shell/ShellSettingsPage.cs','application/Shell/ShellPresentation.cs','application/Shell/ShellClientUpdates.cs','contracts/ShellDesign.cs','contracts/ClientUpdatePackage.cs','frontend/Bosh/osu!/Framework/Compatibility/Windows/WindowsGameForm.cs','tests/WindowsDiscoveryTests.cs','tests/ClientUpdateTests.cs','tools/ClientUpdater/Program.cs','tools/ClientUpdater/UPDATES.md','tools/v12_source_archive.py','tools/package_windows_discovery.py']
 +patch=''
 +with zipfile.ZipFile(BASE/'release-assets/Boshsu-1.2-source.zip') as old:
 + for name in names:
 +  key='stable-remastered/'+name;before=old.read(key).decode('utf-8-sig').splitlines(True) if key in old.namelist() else []
 +  patch+=''.join(difflib.unified_diff(before,(R/name).read_text(encoding='utf-8-sig').splitlines(True),fromfile='a/'+key,tofile='b/'+key))
-+P=repo/'patches/1.2-rc5';P.mkdir(parents=True);(P/'windows-discovery.patch').write_text(patch,encoding='utf-8');shutil.copy2(R/'tests/WindowsDiscoveryTests.cs',P/'WindowsDiscoveryTests.cs')
++P=repo/'patches/1.2-rc5';P.mkdir(parents=True);(P/'windows-discovery.patch').write_text(patch,encoding='utf-8');shutil.copy2(R/'tests/WindowsDiscoveryTests.cs',P/'WindowsDiscoveryTests.cs');shutil.copy2(R/'tests/ClientUpdateTests.cs',P/'ClientUpdateTests.cs')
 +O=A/'release-assets';O.mkdir()
 +spec=importlib.util.spec_from_file_location('source_archive',R/'tools/v12_source_archive.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);module.A=O;module.E=E;original=sys.argv;sys.argv=['source'];module.main();sys.argv=original
 +patterns=[re.compile(rb'discord(?:app)?\.com/api/webhooks/\d+/[A-Za-z0-9_-]{20,}'),re.compile(rb'gh[pousr]_[A-Za-z0-9]{30,}'),re.compile(rb'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\r\n]+(?:[A-Za-z0-9+/=]{40,}[\r\n]+){2}')]
@@ -964,7 +1237,7 @@
 + findings=[i.filename for i in z.infolist() if any(p.search(z.read(i)) for p in patterns)];assert not findings,findings
 + assert not any('restore_kai' in n or 'inspect_kai_data' in n or 'find_kai_profile' in n for n in z.namelist())
 + write(E/'SOURCE_PRIVACY_SCAN.json',dict(Passed=True,Entries=len(z.infolist()),CredentialFindings=0,PrivatePlayerDataIncluded=False))
-+build=json.loads((C/'BOSHSU_BUILD.json').read_text());build.update(ReleaseTag=TAG,Hotfix='Windows application identity and optional discovery registration',ExeSHA256=sha(C/'Boshsu.exe'),UpdaterSHA256=sha(C/'Boshsu.Updater.exe'),SourceSHA256=sha(O/'Boshsu-1.2-source.zip'),WindowsRegistrationChecks=29,AutomaticRecorderRecognitionQualified=False);write(C/'BOSHSU_BUILD.json',build)
++build=json.loads((C/'BOSHSU_BUILD.json').read_text());build.update(ReleaseTag=TAG,Hotfix='Windows application identity and standalone manual updates',ExeSHA256=sha(C/'Boshsu.exe'),UpdaterSHA256=sha(C/'Boshsu.Updater.exe'),SourceSHA256=sha(O/'Boshsu-1.2-source.zip'),WindowsRegistrationChecks=29,ManualUpdates=True,UpdaterChecks=82,FreshZIPLaunchChecks=13,GameplaySmokeCycles=1,ManualUpdateE2E=True,AutomaticRecorderRecognitionQualified=False);write(C/'BOSHSU_BUILD.json',build)
 +assert not (C/'StableRemasteredAccounts').exists() and not (C/'BoshShell.json').exists()
 +write(C/'BOSHSU_FILES.json',{p.relative_to(C).as_posix():sha(p) for p in sorted(C.rglob('*')) if p.is_file() and p.name!='BOSHSU_FILES.json'})
 +with zipfile.ZipFile(O/'Boshsu-1.2-clean.zip','w',zipfile.ZIP_DEFLATED,compresslevel=6,strict_timestamps=False) as z:
@@ -973,7 +1246,7 @@
 +with zipfile.ZipFile(O/'Boshsu-1.2-clean.zip') as z:assert z.testzip() is None
 +(O/'SHA256SUMS.txt').write_text(''.join(sha(O/n)+'  '+n+'\n' for n in ['Boshsu-1.2-clean.zip','Boshsu-1.2-source.zip']),encoding='utf-8')
 +manifest=json.loads((repo/'release-manifest.json').read_text());manifest.update(Tag=TAG,ExeSHA256=sha(C/'Boshsu.exe'),UpdaterSHA256=sha(C/'Boshsu.Updater.exe'),WindowsRegistrationChecks=29,AutomaticRecorderRecognitionQualified=False,Files={n:dict(SHA256=sha(O/n),Bytes=(O/n).stat().st_size) for n in ['Boshsu-1.2-clean.zip','Boshsu-1.2-source.zip','SHA256SUMS.txt']});write(repo/'release-manifest.json',manifest);write(E/'PACKAGE.json',manifest)
-+notes='''## Boshsu 1.2 RC5 — Windows application discovery
++notes='''## Boshsu 1.2 RC5 — Windows discovery and manual updates
 +
 +Adds a stable Windows AppUserModelID, a Boshsu window name from construction, and optional per-user App Paths / Applications registration with a matching Start-menu shortcut. This makes application identity/path information available through documented Windows mechanisms.
 +
@@ -981,11 +1254,13 @@
 +
 +Registration is enabled on first launch of the packaged build. Use **Options → Advanced → Windows integration** to disable, inspect or repair it; search also finds game detection/recording. It runs outside gameplay, retains foreign entries, and respects which copy owns the current registration. Gameplay, assists, PP and the native engine are unchanged. All RC4 file-picker and RC3 input/UI corrections are retained.
 +
-+**Update:** Options → Updates → Download → Restart & install, with beta releases enabled. Updating is the player's choice. RC1 users need the complete portable ZIP once; RC2 and later already include the updater.
++**Manual update:** double-click **Boshsu.Updater.exe**, select your existing installation, downloaded clean ZIP and `SHA256SUMS.txt`, then verify and install. This works offline without the client updater. For an older updater, extract the new ZIP to a separate folder and use its updater to select the existing installation. Keep both downloads from the same official release; local checksums check integrity, not publisher authenticity. Player data is preserved and running targets/downgrades are refused. [Update guide](https://github.com/hsob2nd/Boshsu/blob/main/docs/UPDATES.md).
++
++**In-client update:** Options → Updates → Download → Restart & install, with beta releases enabled. Updating is the player's choice. RC1 users need the complete portable ZIP once; RC2 and later already include the updater.
 +
 +`Boshsu-1.2-clean.zip` is the complete fresh-data Windows x64 portable beta (.NET Framework 4.8). Extract the whole ZIP and run `Boshsu.exe`. `Boshsu-1.2-source.zip` contains the corresponding source; `SHA256SUMS.txt` provides integrity checks.
 +
-+Validation: 29 non-GUI Windows app-ID/registry/shortcut checks, plus 9,736 contract, 2,322 bridge, 5,890 shell and 55 updater checks passed. No game or recording app was launched for this pass. Capture hooks, automatic recognition and recording performance remain unverified.
++Validation: the complete ZIP launched with fresh data, passed 13 first-launch/saved-restart assertions and completed a native gameplay cycle (four pause/resume pairs, one retry and Results). The standalone update window, file selection, full installation and automatic restart passed; 13 tracked player files were unchanged. Tests used disposable data and a launch-only left-monitor override on this Windows PC. Also passed: 29 Windows app-ID/registry/shortcut, 9,736 contract, 2,322 bridge, 5,890 shell and 82 updater checks. These are not all-hardware or recording certifications; capture hooks, automatic recognition and recording performance remain unverified. Your existing installation is updated only when you choose to update it.
 +
 +User profiles/scores/maps/settings remain independent of application updates. Clean packages exclude private player data and use bounded current-session diagnostics, Off by default. [Full history](https://github.com/hsob2nd/Boshsu/blob/main/CHANGELOG.md).
 +
