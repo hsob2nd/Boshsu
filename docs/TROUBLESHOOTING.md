@@ -25,3 +25,7 @@ Include client version, OS, GPU/driver, resolution/window mode, selected skin, m
 For timing/assist issues, distinguish cursor movement, target switching, taps and slider bodies. For PP issues, include provider and rated/generated state. Avoid treating a high total or a miss count as proof of a particular cause.
 
 Do not include passwords, tokens, private account configs or unreviewed full logs. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+## Raw Input or F9 menu problems
+
+Use RC2 or later. RC1 could select the Windows movement fallback and F9 could open an unsupported login-only Options state. RC2 fixes these ownership/navigation paths. Report any remaining device-specific movement issue in GitHub Issues with mouse/tablet, sensitivity, display mode and Raw Input/absolute-window settings. Do not upload credentials or personal profile files.
