@@ -23,3 +23,11 @@ Only application/native binaries and package metadata are updated in the persona
 Options → Updates (also universal search) checks this repository for compatible stable/beta releases. Startup checks and beta eligibility are optional. GitHub asset SHA-256, package identity, per-file hashes and allowed paths are verified before installation. Downloading and verification run outside gameplay; installation waits for the application to close, replaces application-owned files, restarts Boshsu and retains one prior application version. Profiles, scores, replays, maps, skins, configuration and custom PP providers cannot be supplied as update entries. Disk space is checked before staging/backups.
 
 The final client also passed two update-page/live GitHub assertions (98 total runtime assertions). The installer passed 55 release-selection, checksum, metadata, path protection, user-data preservation, injected-write-failure rollback and bounded-recovery checks. These are explicit fixtures; they do not certify every Windows filesystem/device.
+
+## Published package and full update-path check
+
+Published `v1.2.0-rc.2` at https://github.com/hsob2nd/Boshsu/releases/tag/v1.2.0-rc.2, from documentation/patch commit `b905b4964db37faefc01a39e4634206d78a070fe`. GitHub SHA-256 digests match both archives and the checksum file.
+
+After publication, the real client downloaded that GitHub asset, verified it, waited for its owner process to close, installed it and restarted into the normal Main Menu. This used a disposable same-release reinstall fixture; normal update discovery still rejects same-version offers and downgrades. Five protected fixture files remained identical, installed application/native/updater/model hashes matched the clean candidate, one recovery version remained and no staging directory remained.
+
+The personal installation matches those application/native/updater/model binaries. All 138 checked personal data/settings files remained identical. Detailed current-session diagnostics remain bounded and Off by default. Physical device feel remains the user play-session check.
