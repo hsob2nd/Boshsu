@@ -4,6 +4,20 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.3 RC1 — Bounded overhead, source builds and qualification (17 October 2026)
+
+- Preserved gameplay/assist models, map-time ownership, PP/reward rules, progression, profiles and skin-controlled gameplay. No duplicate DT/NC reward was restored.
+- Cached exact menu PP selection identity and live PP callbacks; moved task closure allocation behind the due-request gate. Removed measured recurring allocations without changing outputs.
+- Reused identical canonical native PP preparation for eligible NM/HD rate-1 contexts. Expanded 216-state golden capture and wider 560-row matrix remain exact.
+- Moved optional diagnostic disk scans/writes to one bounded FIFO worker; retained default-Off recording, newest-session retention, hard storage caps and visible write failures/drops. Added frame histograms/resource inventories.
+- Documented two foreground comparison pairs. Mean CPU frame work is similar/slightly higher, with rare long frames remaining; no general FPS, memory or zero-spike win is claimed.
+- Retained existing PP accuracy/HD edge cases and a captured dense-map replay mismatch reproduced identically on sealed RC6. They are not relabelled as passes or silently retuned.
+- Repeated pause, raw input/F9, file-picker and 25 skin/resolution chrome checks. Copied-installation update/rollback preserves protected player files; personal installations are not automatically replaced.
+- Repaired supported build/tool discovery, pinned 948 native source inputs and 29 runtime dependencies, preserved generated-file timestamps and rebuilt native/managed output from a fresh Git-free extraction. The qualified model rebuilt byte-identically; clean-machine/Linux/full-host reproducibility remains unqualified.
+- Added current architecture/thread/data/build documentation, an explicit 181-section qualification ledger, single staging/source/sealing procedures and read-only release integrity/Windows CPU CI. Retained complete prior history and upstream notices.
+
+See [the engineering report](docs/STABLE_REMASTERED_V13_REPORT.md), [performance evidence](docs/STABLE_REMASTERED_V13_PERFORMANCE.md) and [remaining qualification scope](docs/STABLE_REMASTERED_V13_REQUIREMENTS.md).
+
 ## 1.2 RC6 — Pause-menu correctness and session diagnostics (17 October 2026)
 
 - Fixed a reproduced continuation-state bug: after Continue, reopening Pause and sending another continuation click could restart the map. The paused state now rejects continuation and clears stale confirmation.

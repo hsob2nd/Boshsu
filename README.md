@@ -8,13 +8,13 @@ McOsu-derived code retains GPL-3.0, and original project modifications retain th
 
 Boshsu combines familiar song selection and skin-controlled gameplay with local profiles, custom PP systems, Map Lab, assistance settings, progression and player customization.
 
-**Current client: 1.2 RC6 · Windows x64 · release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
+**Current client: 1.3 RC1 · Windows x64 · release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
 
 ## Download
 
-- **[Portable Windows x64 beta package — Boshsu-1.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.6/Boshsu-1.2-clean.zip)**
-- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.6/Boshsu-1.2-source.zip)
-- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.6/SHA256SUMS.txt)
+- **[Portable Windows x64 beta package — Boshsu-1.3-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.3.0-rc.1/Boshsu-1.3-clean.zip)**
+- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.3.0-rc.1/Boshsu-1.3-source.zip)
+- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.3.0-rc.1/SHA256SUMS.txt)
 - [Release notes](CHANGELOG.md)
 
 The beta is a complete portable client package, not just an executable or source download. Extract the **whole client ZIP** into a writable folder and run **Boshsu.exe**. Keep its DLLs and resource folders together. Do not run the executable from inside the ZIP. The application is built for **Windows x64 and .NET Framework 4.8**; a separate compiler or PP calculator installation is not required to play.
@@ -23,7 +23,7 @@ The clean package starts with fresh local data. It excludes the developer's prof
 
 No maps or custom skins are bundled. Choose your Songs library and skin in Options. First launch opens the Main Menu in fullscreen at the primary display's native resolution; later display changes are saved.
 
-RC6 fixes pause/continuation ownership and reduces diagnostic overhead while keeping storage limits. See [the correction and validation report](docs/PAUSE_SPIKE_FIX.md).
+Version 1.3 reduces recurring PP/UI allocations, reuses identical PP preparation and queues optional diagnostic disk work. It preserves the assist/reward model. Existing PP/replay edge cases and rare long frames remain documented; this is an optimization candidate, not a zero-spike or blanket correctness certificate. See [the Version 1.3 report](docs/STABLE_REMASTERED_V13_REPORT.md). RC6 fixed pause/continuation ownership and reduced diagnostic overhead while keeping storage limits. See [the correction and validation report](docs/PAUSE_SPIKE_FIX.md).
 
 RC5 adds optional per-user Windows application registration and a stable app identity, retaining RC4’s file-picker and RC3’s input/UI corrections. This supplies Windows discovery metadata; automatic recognition by AMD/Insights remains unverified. See [Windows discovery and research](docs/WINDOWS_DISCOVERY.md).
 
@@ -71,7 +71,7 @@ The legacy embedded Discord crash-reporting transport has been removed from this
 
 ## Repository and source
 
-This repository contains the client documentation, release information, notices and reviewable hotfix patches/tests. The full corresponding project/native-engine source snapshot is supplied as a **Release asset** rather than placing the large ZIP in Git history. See [development](docs/DEVELOPMENT.md) for its contents and current build limitations.
+This repository contains the client documentation, release information, notices and reviewable optimization/hotfix patches and tests. The full corresponding project/native-engine source snapshot is supplied as a **Release asset** rather than placing the large ZIP in Git history. See [development](docs/DEVELOPMENT.md) for its contents and current build limitations.
 
 ## Open source and license scope
 
@@ -85,4 +85,4 @@ Use [GitHub Issues](https://github.com/hsob2nd/Boshsu/issues) for bug reports an
 
 Public files and release assets remain readable/downloadable, and GitHub permits public repositories to be cloned or forked. Restricting contribution channels does not make public source private.
 
-Unused GitHub Actions are disabled. Never post passwords, tokens, private profiles or unreviewed logs in public issues.
+Release integrity and CPU regression workflows are owner-managed with read-only repository permissions. Never post passwords, tokens, private profiles or unreviewed logs in public issues.
