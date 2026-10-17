@@ -6,6 +6,9 @@ The latest candidate is listed first. The earlier history below runs from the pr
 
 ## 1.2 — initial clean GitHub prerelease
 
+- Explicit open-source identification and license-scope documentation, including the separate terms and missing source for bundled prebuilt components.
+- Clearly labeled complete portable Windows x64 beta ZIP, alongside corresponding project/native source and integrity checksums.
+- Issues-only contribution policy: pull requests, Discussions, wiki editing and individual commit comments disabled; public readability/cloning/forking is separate from write access.
 - Clean Windows x64 package with fresh local data and the same qualified assists/features as the personal client.
 - Saved Map Lab difficulties group under their source map set and restore from authoring provenance after map processing/database rebuilds.
 - Generated difficulty/audio ownership remains distinct; current pitch modes receive separate generated identities.

@@ -1,6 +1,10 @@
 # Boshsu
 
-**A Bosh / osu!stable-style client experience, powered internally by the McOsu gameplay runtime.**
+**An open-source Bosh / osu!stable-style client project, powered internally by the McOsu gameplay runtime.**
+
+[Open-source project / GPL-3.0](LICENSE) · [GitHub Issues support](https://github.com/hsob2nd/Boshsu/issues)
+
+McOsu-derived code retains GPL-3.0, and original project modifications retain their stated GPL-3.0-or-later license. Corresponding frontend/native source is included with the prerelease. Bundled assets, dependencies and prebuilt modules have separate terms; this is not a claim that every distributed component is open source. See [license scope and exceptions](#open-source-and-license-scope).
 
 Boshsu combines familiar song selection and skin-controlled gameplay with local profiles, custom PP systems, Map Lab, assistance settings, progression and player customization.
 
@@ -8,12 +12,12 @@ Boshsu combines familiar song selection and skin-controlled gameplay with local 
 
 ## Download
 
-- [Clean Windows x64 client](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.1/Boshsu-1.2-clean.zip)
+- **[Portable Windows x64 beta package — Boshsu-1.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.1/Boshsu-1.2-clean.zip)**
 - [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.1/Boshsu-1.2-source.zip)
 - [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.1/SHA256SUMS.txt)
 - [Release notes](CHANGELOG.md)
 
-Extract the **whole client ZIP** into a writable folder and run **Boshsu.exe**. Keep its DLLs and resource folders together. Do not run the executable from inside the ZIP. The application is built for **Windows x64 and .NET Framework 4.8**; a separate compiler or PP calculator installation is not required to play.
+The beta is a complete portable client package, not just an executable or source download. Extract the **whole client ZIP** into a writable folder and run **Boshsu.exe**. Keep its DLLs and resource folders together. Do not run the executable from inside the ZIP. The application is built for **Windows x64 and .NET Framework 4.8**; a separate compiler or PP calculator installation is not required to play.
 
 The clean package starts with fresh local data. It excludes the developer's profiles, scores, avatars, settings, map library, custom skins, replays and diagnostic history. It intentionally includes the same qualified assistance model and calculator modules as the personal build.
 
@@ -61,6 +65,16 @@ The legacy embedded Discord crash-reporting transport has been removed from this
 
 This repository contains the client documentation, release information and notices. The full corresponding project/native-engine source snapshot is supplied as a **Release asset** rather than placing the large ZIP in Git history. See [development](docs/DEVELOPMENT.md) for its contents and current build limitations.
 
-McOsu GPL and McEngine MIT notices are retained. Third-party components have their own terms; the root GPL text is not a blanket license for every supplied asset/runtime. Read [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [release status](docs/RELEASE_STATUS.md).
+## Open source and license scope
 
-For bugs, see [CONTRIBUTING.md](CONTRIBUTING.md). Never post passwords, tokens, private profiles or unreviewed logs in public issues.
+The open-source project code and its corresponding source can be studied and used under the applicable licenses. [McOsu's GPL-3.0 text](LICENSE), original source notices and the GPL-3.0-or-later scope of project modifications are retained. McEngine and supported source-backed calculator components retain their MIT notices; bundled open fonts retain OFL notices.
+
+The historical Bosh PP module is supplied prebuilt and its implementation source is unavailable. Supplied artwork, legacy resource assemblies and audio/helper runtimes have separate or unresolved redistribution terms. Public repository visibility does not remove those limits or make the full binary package a certified entirely open-source distribution. Read [third-party notices](THIRD_PARTY_NOTICES.md) and [release status](docs/RELEASE_STATUS.md).
+
+## Support and repository contributions
+
+Use [GitHub Issues](https://github.com/hsob2nd/Boshsu/issues) for bug reports and focused feature requests. Public submissions are handled through Issues; pull requests, Discussions, wiki editing and commit comments are disabled. Repository writes and releases remain owner-managed. See [the reporting guide](CONTRIBUTING.md).
+
+Public files and release assets remain readable/downloadable, and GitHub permits public repositories to be cloned or forked. Restricting contribution channels does not make public source private.
+
+Unused GitHub Actions are disabled. Never post passwords, tokens, private profiles or unreviewed logs in public issues.
