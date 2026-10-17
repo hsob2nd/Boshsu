@@ -1,28 +1,39 @@
 {
   "Product": "Boshsu",
   "Version": "1.2",
-  "Tag": "v1.2.0-rc.1",
+  "Tag": "v1.2.0-rc.2",
   "Channel": "Prerelease",
   "Platform": "Windows x64",
   "FreshUserData": true,
   "DetailedTelemetryDefault": false,
   "AutomaticCrashUploads": false,
-  "EmbeddedCrashReportingCredential": false,
-  "GameplayChanges": false,
+  "ExeSHA256": "e63f1cddc2335f2b85c43cf14a755dd9dabad7a33114c37518ee32cb7f951ae2",
+  "NativeSHA256": "8807ab3504baa2b4590f006285255dec752df8d540e7e8335eba95e0d7775f40",
+  "AssistModelSHA256": "b636fe27c4dc34bfd7a3dcf032b67dc9e43bc744fc80c073125fa4b57aecaa7e",
+  "QualifiedAssistModelChanged": false,
+  "PPRewardsChanged": false,
+  "RawInputRuntimeChecks": 96,
+  "ContractAssertions": 9736,
+  "BridgeChecks": 2322,
+  "UpdaterChecks": 55,
+  "LiveGitHubUpdateCheck": true,
+  "InClientUpdates": true,
+  "UpdaterSHA256": "97671c8af9a236998ce95c12d0a464436fc97cd64a836e983c2167a0a2e27400",
+  "PhysicalDeviceFeelQualified": false,
+  "PublicRedistributionCertified": false,
+  "LiveOnlineQualified": false,
   "Files": {
     "Boshsu-1.2-clean.zip": {
-      "SHA256": "2cac9ab53e89d6771b20da4c7feaf415d00ab735df557e2614f3757a4100c7a8",
-      "Bytes": 161642230
+      "SHA256": "fdb660f766291872f0b8ff234fe0831a1cb37ff49c4fae1528a4f3b29b7ed4e8",
+      "Bytes": 161628192
     },
     "Boshsu-1.2-source.zip": {
-      "SHA256": "fd76917506404cbcc4ba3625de3152d027257d236619264c4c64175a8db11430",
-      "Bytes": 131294691
+      "SHA256": "9b1a73352b6ff237475357e23823d78a2382f84e44c9bc0e8352b16155e56210",
+      "Bytes": 131322386
+    },
+    "SHA256SUMS.txt": {
+      "SHA256": "6ae4ab3ba9063289b1d0c6de016bae4cc18288263ec0f0c5af626f20f842efe6",
+      "Bytes": 177
     }
-  },
-  "ExeSHA256": "c840d05d7b999def43b5d8f5cd105e4119944336b296fcc3e4f47c08132a2ba6",
-  "StartupChecks": 8,
-  "RestartChecks": 5,
-  "LocalErrorChecks": 8,
-  "PublicRedistributionCertified": false,
-  "LiveOnlineQualified": false
+  }
 }

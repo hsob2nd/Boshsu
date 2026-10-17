@@ -4,6 +4,18 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.2 RC2 — Raw Input and F9 hotfix (17 October 2026)
+
+- Fixed native Raw Input falling back to Windows cursor movement; one gameplay cursor/sensitivity owner.
+- Corrected absolute-tablet primary/virtual-screen and scaled/letterboxed viewport mapping, valid zero coordinates and button-only packet handling.
+- Prevented loading/pause/focus-loss movement from leaking into the next gameplay owner.
+- Fixed F9 opening an unsupported legacy login-only menu; repeated presses now preserve normal navigation.
+- Added Options → Updates: GitHub release checking, beta/stable preference, in-client verified downloads, cancellation and install/restart after the player clicks Update. Personal data is protected; one recovery version is kept.
+- 96 real-client synthetic input/navigation checks, contract/bridge checks and qualified assist-ownership regressions passed. Physical device feel remains a user play test.
+- Matched personal/clean binaries, full source snapshot, reviewable patch, tests, release manifest and integrity checksums. Profiles/settings and qualified assists/PP rules preserved.
+
+See [the correction report](docs/RAW_INPUT_FIX.md).
+
 ## 1.2 — initial clean GitHub prerelease
 
 - Explicit open-source identification and license-scope documentation, including the separate terms and missing source for bundled prebuilt components.
