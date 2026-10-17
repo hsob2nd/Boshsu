@@ -1,0 +1,187 @@
+# Version 1.3 requirements and qualification scope
+
+17 October 2026. Reviewed/preserved does not mean fully qualified. Private evidence names identify local audit records; public reports summarize them without player data. Publication and final package digests are tracked separately in the release manifest.
+
+| # | Requirement | Status and scope |
+|---:|---|---|
+| 1 | VERSION 1.3 FEATURE FREEZE | **Preserved within tested scope** — Frozen model/reward/gameplay sources retained; exact PP/traces and progression fixtures. This is not universal parity certification. |
+| 2 | PRESERVE GAMEPLAY BEHAVIOUR | **Preserved within tested scope** — Frozen model/reward/gameplay sources retained; exact PP/traces and progression fixtures. This is not universal parity certification. |
+| 3 | PRESERVE PP EXACTLY | **Preserved within tested scope** — Frozen model/reward/gameplay sources retained; exact PP/traces and progression fixtures. This is not universal parity certification. |
+| 4 | PRESERVE TIMEWARP / DT RULES | **Preserved within tested scope** — Frozen model/reward/gameplay sources retained; exact PP/traces and progression fixtures. This is not universal parity certification. |
+| 5 | PRESERVE MAP LAB BEHAVIOUR | **Preserved within tested scope** — Frozen model/reward/gameplay sources retained; exact PP/traces and progression fixtures. This is not universal parity certification. |
+| 6 | PRESERVE PROGRESSION | **Preserved within tested scope** — Frozen model/reward/gameplay sources retained; exact PP/traces and progression fixtures. This is not universal parity certification. |
+| 7 | PRESERVE VISUAL IDENTITY | **Preserved within tested scope** — Frozen model/reward/gameplay sources retained; exact PP/traces and progression fixtures. This is not universal parity certification. |
+| 8 | BASELINE FIRST | **Measured / partially improved** — Two foreground comparison pairs; recurring PP allocations removed. Mean work is similar/slightly higher; tails/GC improvement is not proven. |
+| 9 | FRAME PACING IS THE PRIMARY PERFORMANCE METRIC | **Measured / partially improved** — Two foreground comparison pairs; recurring PP allocations removed. Mean work is similar/slightly higher; tails/GC improvement is not proven. |
+| 10 | FRAME-TIME HISTOGRAMS | **Measured / partially improved** — Two foreground comparison pairs; recurring PP allocations removed. Mean work is similar/slightly higher; tails/GC improvement is not proven. |
+| 11 | LONG-FRAME INVESTIGATION | **Measured / partially improved** — Two foreground comparison pairs; recurring PP allocations removed. Mean work is similar/slightly higher; tails/GC improvement is not proven. |
+| 12 | SPIKE CLASSIFICATION | **Measured / partially improved** — Two foreground comparison pairs; recurring PP allocations removed. Mean work is similar/slightly higher; tails/GC improvement is not proven. |
+| 13 | GAMEPLAY HOT-PATH AUDIT | **Measured / partially improved** — Two foreground comparison pairs; recurring PP allocations removed. Mean work is similar/slightly higher; tails/GC improvement is not proven. |
+| 14 | ALLOCATION REDUCTION | **Measured / partially improved** — Two foreground comparison pairs; recurring PP allocations removed. Mean work is similar/slightly higher; tails/GC improvement is not proven. |
+| 15 | GC PRESSURE | **Measured / partially improved** — Two foreground comparison pairs; recurring PP allocations removed. Mean work is similar/slightly higher; tails/GC improvement is not proven. |
+| 16 | DECODER WORK | **Reviewed / retained** — Owner/worker bounds documented. No decoder, upload, priority, affinity or thread-count retune; exhaustive elimination of all blocking work is unqualified. |
+| 17 | RESOURCE UPLOADS | **Reviewed / retained** — Owner/worker bounds documented. No decoder, upload, priority, affinity or thread-count retune; exhaustive elimination of all blocking work is unqualified. |
+| 18 | GAMEPLAY THREAD CLEANLINESS | **Reviewed / retained** — Owner/worker bounds documented. No decoder, upload, priority, affinity or thread-count retune; exhaustive elimination of all blocking work is unqualified. |
+| 19 | MULTITHREADING AUDIT | **Reviewed / retained** — Owner/worker bounds documented. No decoder, upload, priority, affinity or thread-count retune; exhaustive elimination of all blocking work is unqualified. |
+| 20 | THREAD COUNT DOES NOT EQUAL PERFORMANCE | **Reviewed / retained** — Owner/worker bounds documented. No decoder, upload, priority, affinity or thread-count retune; exhaustive elimination of all blocking work is unqualified. |
+| 21 | HARDWARE-AWARE WORKER POLICY | **Reviewed / retained** — Owner/worker bounds documented. No decoder, upload, priority, affinity or thread-count retune; exhaustive elimination of all blocking work is unqualified. |
+| 22 | ASSISTS MUST REMAIN PERFORMANCE-INDEPENDENT | **Preserved / scoped qualification** — 45 exact assist traces and current native ownership suites; mixed assist permutations. Physical-device consistency across arbitrary PCs remains unqualified. |
+| 23 | MAX ASSIST PERFORMANCE | **Preserved / scoped qualification** — 45 exact assist traces and current native ownership suites; mixed assist permutations. Physical-device consistency across arbitrary PCs remains unqualified. |
+| 24 | MAPLE PERFORMANCE | **Preserved / scoped qualification** — 45 exact assist traces and current native ownership suites; mixed assist permutations. Physical-device consistency across arbitrary PCs remains unqualified. |
+| 25 | RELAX / AIM CORRECTION | **Preserved / scoped qualification** — 45 exact assist traces and current native ownership suites; mixed assist permutations. Physical-device consistency across arbitrary PCs remains unqualified. |
+| 26 | LIVE PP PERFORMANCE | **Implemented / exact parity** — Cache exact menu selection identity/delegate; one live calculation in flight. Reuse only identical canonical NM/HD rate-1 preparation. |
+| 27 | PP CACHE REVIEW | **Implemented / exact parity** — Cache exact menu selection identity/delegate; one live calculation in flight. Reuse only identical canonical NM/HD rate-1 preparation. |
+| 28 | MAP DIFFICULTY PRECOMPUTATION | **Implemented / exact parity** — Cache exact menu selection identity/delegate; one live calculation in flight. Reuse only identical canonical NM/HD rate-1 preparation. |
+| 29 | SERVER / NETWORK OPTIMIZATION | **Reviewed / mock qualification** — Existing asynchronous timeout/cancellation and bounded transport preserved. No real authentication, upload or backend award rules certified. |
+| 30 | SERVER POLLING | **Reviewed / mock qualification** — Existing asynchronous timeout/cancellation and bounded transport preserved. No real authentication, upload or backend award rules certified. |
+| 31 | SERVER JSON / SERIALIZATION | **Reviewed / mock qualification** — Existing asynchronous timeout/cancellation and bounded transport preserved. No real authentication, upload or backend award rules certified. |
+| 32 | TELEMETRY PERFORMANCE | **Implemented / bounded tests** — Optional disk scans/writes queued; JSON formatting remains at report boundaries and default-off counters still sample. Failure/drop counts visible. |
+| 33 | DEVELOPMENT DIAGNOSTICS | **Implemented / bounded tests** — Optional disk scans/writes queued; JSON formatting remains at report boundaries and default-off counters still sample. Failure/drop counts visible. |
+| 34 | UI RENDERING OPTIMIZATION | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 35 | ONLY ANIMATE VISIBLE CONTENT | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 36 | MENU EFFECT SUSPENSION DURING GAMEPLAY | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 37 | UI LAYOUT CACHE | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 38 | TEXT CACHE | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 39 | FONT CACHE REVIEW | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 40 | PROFILE IMAGE CACHE | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 41 | CALLING CARD CACHE | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 42 | RESOURCE LEASES / OWNERSHIP | **Preserved / bounded resources** — Existing visible-content, shell suspension, leases/font/texture policies retained; logical skin/layout fixtures pass. No shell redesign. |
+| 43 | MEMORY TREND | **Measured / scoped trend** — Resource samples retain warmup and lifecycle state; plateau and GC interpretation in resource report. Counts are not proof against every leak. |
+| 44 | HANDLE TREND | **Measured / scoped trend** — Resource samples retain warmup and lifecycle state; plateau and GC interpretation in resource report. Counts are not proof against every leak. |
+| 45 | THREAD TREND | **Measured / scoped trend** — Resource samples retain warmup and lifecycle state; plateau and GC interpretation in resource report. Counts are not proof against every leak. |
+| 46 | AUDIO RESOURCE AUDIT | **Scoped transition qualification** — Repeated play/pause/retry/results/map changes retain state evidence. No audio loopback or universal first-frame latency certification. |
+| 47 | AUDIO TRANSITIONS | **Scoped transition qualification** — Repeated play/pause/retry/results/map changes retain state evidence. No audio loopback or universal first-frame latency certification. |
+| 48 | SONG SELECT → GAMEPLAY | **Scoped transition qualification** — Repeated play/pause/retry/results/map changes retain state evidence. No audio loopback or universal first-frame latency certification. |
+| 49 | RETRY SPEED | **Scoped transition qualification** — Repeated play/pause/retry/results/map changes retain state evidence. No audio loopback or universal first-frame latency certification. |
+| 50 | GAMEPLAY → RESULTS | **Scoped transition qualification** — Repeated play/pause/retry/results/map changes retain state evidence. No audio loopback or universal first-frame latency certification. |
+| 51 | RESULTS → SONG SELECT | **Scoped transition qualification** — Repeated play/pause/retry/results/map changes retain state evidence. No audio loopback or universal first-frame latency certification. |
+| 52 | MAP SWITCHING | **Scoped transition qualification** — Repeated play/pause/retry/results/map changes retain state evidence. No audio loopback or universal first-frame latency certification. |
+| 53 | STALE ASYNC WORK | **Scoped transition qualification** — Repeated play/pause/retry/results/map changes retain state evidence. No audio loopback or universal first-frame latency certification. |
+| 54 | FILE / FOLDER ORGANIZATION | **Implemented / preserved** — Supported source/build/data layout, fresh staging, corresponding source and verified private checkpoint. Historical player files retained privately. |
+| 55 | PROPOSED SOURCE STRUCTURE | **Implemented / preserved** — Supported source/build/data layout, fresh staging, corresponding source and verified private checkpoint. Historical player files retained privately. |
+| 56 | USER DATA STRUCTURE | **Implemented / preserved** — Supported source/build/data layout, fresh staging, corresponding source and verified private checkpoint. Historical player files retained privately. |
+| 57 | GENERATED FILES | **Implemented / preserved** — Supported source/build/data layout, fresh staging, corresponding source and verified private checkpoint. Historical player files retained privately. |
+| 58 | BUILD OUTPUT | **Implemented / preserved** — Supported source/build/data layout, fresh staging, corresponding source and verified private checkpoint. Historical player files retained privately. |
+| 59 | SHIPPING PACKAGE CLEANUP | **Implemented / preserved** — Supported source/build/data layout, fresh staging, corresponding source and verified private checkpoint. Historical player files retained privately. |
+| 60 | PRESERVE ROLLBACK CHECKPOINTS | **Implemented / preserved** — Supported source/build/data layout, fresh staging, corresponding source and verified private checkpoint. Historical player files retained privately. |
+| 61 | DEAD CODE AUDIT | **Reviewed / conservative retention** — Removed unused GLControl project reference; retained fallback/resource/FFmpeg dependencies and inherited warnings. Giant imported classes/config/save policies were not broadly rewritten. |
+| 62 | NO AGGRESSIVE DEAD-CODE DELETION | **Reviewed / conservative retention** — Removed unused GLControl project reference; retained fallback/resource/FFmpeg dependencies and inherited warnings. Giant imported classes/config/save policies were not broadly rewritten. |
+| 63 | WARNINGS | **Reviewed / conservative retention** — Removed unused GLControl project reference; retained fallback/resource/FFmpeg dependencies and inherited warnings. Giant imported classes/config/save policies were not broadly rewritten. |
+| 64 | NAMING / ORGANIZATION | **Reviewed / conservative retention** — Removed unused GLControl project reference; retained fallback/resource/FFmpeg dependencies and inherited warnings. Giant imported classes/config/save policies were not broadly rewritten. |
+| 65 | GIANT CLASSES / FILES | **Reviewed / conservative retention** — Removed unused GLControl project reference; retained fallback/resource/FFmpeg dependencies and inherited warnings. Giant imported classes/config/save policies were not broadly rewritten. |
+| 66 | DUPLICATE LOGIC | **Reviewed / conservative retention** — Removed unused GLControl project reference; retained fallback/resource/FFmpeg dependencies and inherited warnings. Giant imported classes/config/save policies were not broadly rewritten. |
+| 67 | CONFIG OWNERSHIP | **Reviewed / conservative retention** — Removed unused GLControl project reference; retained fallback/resource/FFmpeg dependencies and inherited warnings. Giant imported classes/config/save policies were not broadly rewritten. |
+| 68 | SAVE FREQUENCY | **Reviewed / conservative retention** — Removed unused GLControl project reference; retained fallback/resource/FFmpeg dependencies and inherited warnings. Giant imported classes/config/save policies were not broadly rewritten. |
+| 69 | ATOMIC DATA WRITES | **Preserved / scoped tests** — Account recovery/persistence/provider tests and transactional package rollback; versioned cache identities retained. No new global disk cap or data migration claimed. |
+| 70 | CACHE FOLDER | **Preserved / scoped tests** — Account recovery/persistence/provider tests and transactional package rollback; versioned cache identities retained. No new global disk cap or data migration claimed. |
+| 71 | CACHE VERSIONING | **Preserved / scoped tests** — Account recovery/persistence/provider tests and transactional package rollback; versioned cache identities retained. No new global disk cap or data migration claimed. |
+| 72 | CACHE SIZE | **Preserved / scoped tests** — Account recovery/persistence/provider tests and transactional package rollback; versioned cache identities retained. No new global disk cap or data migration claimed. |
+| 73 | MAP LAB FILE ORGANIZATION | **Preserved / scoped tests** — Account recovery/persistence/provider tests and transactional package rollback; versioned cache identities retained. No new global disk cap or data migration claimed. |
+| 74 | PP PROVIDER FOLDER | **Preserved / scoped tests** — Account recovery/persistence/provider tests and transactional package rollback; versioned cache identities retained. No new global disk cap or data migration claimed. |
+| 75 | SERVER CACHE | **Preserved / scoped tests** — Account recovery/persistence/provider tests and transactional package rollback; versioned cache identities retained. No new global disk cap or data migration claimed. |
+| 76 | LOG ROTATION | **Bounded / partial failure qualification** — Session/log/diagnostic caps tested. All possible crash/shutdown interruption points and disconnected-storage draining are not certified. |
+| 77 | CRASH LOGS | **Bounded / partial failure qualification** — Session/log/diagnostic caps tested. All possible crash/shutdown interruption points and disconnected-storage draining are not certified. |
+| 78 | ASSET DUPLICATION AUDIT | **Reviewed / retained** — Live resource/runtime dependencies retained; source excludes binaries/private artifacts. ZIP compression selected without runtime texture-quality changes. |
+| 79 | TEXTURE RESOLUTION | **Reviewed / retained** — Live resource/runtime dependencies retained; source excludes binaries/private artifacts. ZIP compression selected without runtime texture-quality changes. |
+| 80 | COMPRESSION | **Reviewed / retained** — Live resource/runtime dependencies retained; source excludes binaries/private artifacts. ZIP compression selected without runtime texture-quality changes. |
+| 81 | STARTUP PERFORMANCE | **Preserved / not separately benchmarked** — No startup network gate added. Cold database/skin/shader warmup work was not independently benchmarked or retuned. |
+| 82 | DO NOT BLOCK STARTUP ON NETWORK | **Preserved / not separately benchmarked** — No startup network gate added. Cold database/skin/shader warmup work was not independently benchmarked or retuned. |
+| 83 | MAP DATABASE STARTUP | **Preserved / not separately benchmarked** — No startup network gate added. Cold database/skin/shader warmup work was not independently benchmarked or retuned. |
+| 84 | SKIN STARTUP | **Preserved / not separately benchmarked** — No startup network gate added. Cold database/skin/shader warmup work was not independently benchmarked or retuned. |
+| 85 | SHADER / RENDER RESOURCE WARMUP | **Preserved / not separately benchmarked** — No startup network gate added. Cold database/skin/shader warmup work was not independently benchmarked or retuned. |
+| 86 | PROFILE SWITCHING | **Scoped qualification** — Profile/world rotations and account/provider fixtures; no live server switching certification. |
+| 87 | WORLD SWITCHING | **Scoped qualification** — Profile/world rotations and account/provider fixtures; no live server switching certification. |
+| 88 | PP PROVIDER SWITCHING | **Scoped qualification** — Profile/world rotations and account/provider fixtures; no live server switching certification. |
+| 89 | LONG SESSION TEST | **Partial / reported** — Mixed short/repeat/extended runs plus resource sweep. Interrupted run and replay failure retained; no uninterrupted 1–3 hour or arbitrary stress certificate. |
+| 90 | LONG SESSION RESOURCE REPORT | **Partial / reported** — Mixed short/repeat/extended runs plus resource sweep. Interrupted run and replay failure retained; no uninterrupted 1–3 hour or arbitrary stress certificate. |
+| 91 | LONG SESSION FRAME REPORT | **Partial / reported** — Mixed short/repeat/extended runs plus resource sweep. Interrupted run and replay failure retained; no uninterrupted 1–3 hour or arbitrary stress certificate. |
+| 92 | RAPID TRANSITION STRESS | **Partial / reported** — Mixed short/repeat/extended runs plus resource sweep. Interrupted run and replay failure retained; no uninterrupted 1–3 hour or arbitrary stress certificate. |
+| 93 | RAPID SKIN SWITCHING | **Partial / reported** — Mixed short/repeat/extended runs plus resource sweep. Interrupted run and replay failure retained; no uninterrupted 1–3 hour or arbitrary stress certificate. |
+| 94 | RAPID PROFILE SWITCHING | **Partial / reported** — Mixed short/repeat/extended runs plus resource sweep. Interrupted run and replay failure retained; no uninterrupted 1–3 hour or arbitrary stress certificate. |
+| 95 | PP PROVIDER STRESS | **Partial / reported** — Mixed short/repeat/extended runs plus resource sweep. Interrupted run and replay failure retained; no uninterrupted 1–3 hour or arbitrary stress certificate. |
+| 96 | NETWORK STRESS | **Mock only** — Network unavailable/cancellation contracts tested; live server flood/authentication/submission not tested. |
+| 97 | ASSIST STRESS | **Scoped qualification** — Representative maps, all qualified assist models, profile rotations and exact CPU traces. Low/Extreme budgets do not certify different physical hardware. |
+| 98 | REGRESSION SUITES | **Scoped qualification** — Representative maps, all qualified assist models, profile rotations and exact CPU traces. Low/Extreme budgets do not certify different physical hardware. |
+| 99 | OUTPUT EQUIVALENCE | **Scoped qualification** — Representative maps, all qualified assist models, profile rotations and exact CPU traces. Low/Extreme budgets do not certify different physical hardware. |
+| 100 | PERFORMANCE CHANGES MUST HAVE EVIDENCE | **Scoped qualification** — Representative maps, all qualified assist models, profile rotations and exact CPU traces. Low/Extreme budgets do not certify different physical hardware. |
+| 101 | DO NOT OVERFIT ONE MAP | **Scoped qualification** — Representative maps, all qualified assist models, profile rotations and exact CPU traces. Low/Extreme budgets do not certify different physical hardware. |
+| 102 | LOW-END PROFILE | **Scoped qualification** — Representative maps, all qualified assist models, profile rotations and exact CPU traces. Low/Extreme budgets do not certify different physical hardware. |
+| 103 | HIGH-END PROFILE | **Scoped qualification** — Representative maps, all qualified assist models, profile rotations and exact CPU traces. Low/Extreme budgets do not certify different physical hardware. |
+| 104 | 4K / HIGH DPI | **Unqualified physically** — Logical 720–1080p/aspect/scale tests passed. No real 4K display, Windows DPI matrix or Linux launch certification. |
+| 105 | STARTUP PACKAGE SIZE | **Reviewed / retained** — Clean staging and bounded one-session logs; player libraries/history are preserved. Existing cache/log actions retained, no new destructive cleanup. |
+| 106 | USERDATA SIZE | **Reviewed / retained** — Clean staging and bounded one-session logs; player libraries/history are preserved. Existing cache/log actions retained, no new destructive cleanup. |
+| 107 | CLEAN CACHE ACTION | **Reviewed / retained** — Clean staging and bounded one-session logs; player libraries/history are preserved. Existing cache/log actions retained, no new destructive cleanup. |
+| 108 | LOG FOLDER ACTION | **Reviewed / retained** — Clean staging and bounded one-session logs; player libraries/history are preserved. Existing cache/log actions retained, no new destructive cleanup. |
+| 109 | REPOSITORY DOCUMENTATION | **Implemented** — Current architecture/thread/data/performance/build documentation and supported tool discovery replace stale instructions. |
+| 110 | THREADING DOCUMENTATION | **Implemented** — Current architecture/thread/data/performance/build documentation and supported tool discovery replace stale instructions. |
+| 111 | DATA LAYOUT DOCUMENTATION | **Implemented** — Current architecture/thread/data/performance/build documentation and supported tool discovery replace stale instructions. |
+| 112 | PERFORMANCE DOCUMENTATION | **Implemented** — Current architecture/thread/data/performance/build documentation and supported tool discovery replace stale instructions. |
+| 113 | DEAD DOCUMENTATION | **Implemented** — Current architecture/thread/data/performance/build documentation and supported tool discovery replace stale instructions. |
+| 114 | BUILD SCRIPT CLEANUP | **Implemented** — Current architecture/thread/data/performance/build documentation and supported tool discovery replace stale instructions. |
+| 115 | REPRODUCIBLE BUILD | **Fresh source build / limited reproducibility** — Git-free fresh native/managed build and byte-identical model passed. Existing compiler reused; host build timestamps differ. No clean-machine/Linux/whole-host byte-reproducibility claim. |
+| 116 | THIRD-PARTY DEPENDENCIES | **Pinned / notices retained** — 948 native source inputs and 29 supplied runtime DLLs checked. No dependency upgrade or unresolved asset/proprietary-module rights certification. |
+| 117 | PIN IMPORTANT DEPENDENCIES | **Pinned / notices retained** — 948 native source inputs and 29 supplied runtime DLLs checked. No dependency upgrade or unresolved asset/proprietary-module rights certification. |
+| 118 | LICENSE FILE ORGANIZATION | **Pinned / notices retained** — 948 native source inputs and 29 supplied runtime DLLs checked. No dependency upgrade or unresolved asset/proprietary-module rights certification. |
+| 119 | SHIPPING VS DEVELOPMENT BUILD | **Pinned / notices retained** — 948 native source inputs and 29 supplied runtime DLLs checked. No dependency upgrade or unresolved asset/proprietary-module rights certification. |
+| 120 | DEBUG SYMBOLS | **Retained privately** — No PDB/debug artifact in public clean/source package; local compiler/debug outputs remain ignored. |
+| 121 | CRASH SAFETY | **Scoped qualification** — Verified portable checkpoint; 3,984 actual update/rollback assertions on a copy. External map library is referenced read-only, not silently backed up. |
+| 122 | PLAYER DATA BACKUP | **Scoped qualification** — Verified portable checkpoint; 3,984 actual update/rollback assertions on a copy. External map library is referenced read-only, not silently backed up. |
+| 123 | MIGRATION TEST | **Scoped qualification** — Verified portable checkpoint; 3,984 actual update/rollback assertions on a copy. External map library is referenced read-only, not silently backed up. |
+| 124 | DO NOT BREAK PORTABILITY | **Scoped qualification** — Verified portable checkpoint; 3,984 actual update/rollback assertions on a copy. External map library is referenced read-only, not silently backed up. |
+| 125 | CASE SENSITIVITY | **Unqualified on Linux** — Case-sensitive source/archive paths checked by inventory; no physical Linux execution. |
+| 126 | ERROR LOG QUALITY | **Reviewed / privacy scan** — Public source path/credential-pattern scan; no private evidence/checkpoints/user data published. This is not a universal secret detector. |
+| 127 | SERVER SECRET SAFETY | **Reviewed / privacy scan** — Public source path/credential-pattern scan; no private evidence/checkpoints/user data published. This is not a universal secret detector. |
+| 128 | BENCHMARK AUTOMATION | **Implemented / scoped evidence** — Owned-map automation, exact-output gates and allocation measurements; general frame-pacing improvement not proven. |
+| 129 | PERFORMANCE GATE | **Implemented / scoped evidence** — Owned-map automation, exact-output gates and allocation measurements; general frame-pacing improvement not proven. |
+| 130 | CORRECTNESS OVER SPEED | **Implemented / scoped evidence** — Owned-map automation, exact-output gates and allocation measurements; general frame-pacing improvement not proven. |
+| 131 | READABILITY OVER MICRO-OPTIMIZATION | **Implemented / scoped evidence** — Owned-map automation, exact-output gates and allocation measurements; general frame-pacing improvement not proven. |
+| 132 | PROFILE-GUIDED OPTIMIZATION | **Implemented / scoped evidence** — Owned-map automation, exact-output gates and allocation measurements; general frame-pacing improvement not proven. |
+| 133 | REMOVE OLD PERFORMANCE WORKAROUNDS | **Reviewed / retained** — No legacy pacing/focus workaround removed without deterministic proof; no priority/affinity workaround introduced. |
+| 134 | TRANSITION SMOOTHNESS | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 135 | FIRST-FRAME PERFORMANCE | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 136 | WARM VS COLD LOAD | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 137 | FILE SCANNING | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 138 | TELEMETRY FILE COUNT | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 139 | REPLAY FILE HANDLING | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 140 | MAPLAB FILE I/O | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 141 | PP PROVIDER LOADING | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 142 | SERVER CACHE PARSING | **Partial / preserved** — Actual lifecycle and stale-request behavior tested; optional diagnostic I/O moved. Exhaustive cold/warm transition/storage latency certification remains open. |
+| 143 | ACHIEVEMENT CATALOGUE | **Preserved / scoped tests** — 18,576-entry achievement catalogue and shipped rewards/progression/account fixtures pass. BigInteger/world/history rules unchanged. |
+| 144 | ACHIEVEMENT UI | **Preserved / scoped tests** — 18,576-entry achievement catalogue and shipped rewards/progression/account fixtures pass. BigInteger/world/history rules unchanged. |
+| 145 | RESULTS ACHIEVEMENT PROCESSING | **Preserved / scoped tests** — 18,576-entry achievement catalogue and shipped rewards/progression/account fixtures pass. BigInteger/world/history rules unchanged. |
+| 146 | PROGRESSION CALCULATION | **Preserved / scoped tests** — 18,576-entry achievement catalogue and shipped rewards/progression/account fixtures pass. BigInteger/world/history rules unchanged. |
+| 147 | BIGINTEGER USE | **Preserved / scoped tests** — 18,576-entry achievement catalogue and shipped rewards/progression/account fixtures pass. BigInteger/world/history rules unchanged. |
+| 148 | WORLD STATE | **Preserved / scoped tests** — 18,576-entry achievement catalogue and shipped rewards/progression/account fixtures pass. BigInteger/world/history rules unchanged. |
+| 149 | PROFILE HISTORY | **Preserved / scoped tests** — 18,576-entry achievement catalogue and shipped rewards/progression/account fixtures pass. BigInteger/world/history rules unchanged. |
+| 150 | ASSET PRELOAD PREDICTION | **Retained** — Existing bounded shell preparation remains; no speculative preload expansion. |
+| 151 | PERFORMANCE OVERLAY | **Partial / documented** — Minimal overlay/Off controls retained; diagnostic phase/budget evidence added. Default-off metric counters still have sampling overhead. |
+| 152 | PERFORMANCE OVERLAY OFF | **Partial / documented** — Minimal overlay/Off controls retained; diagnostic phase/budget evidence added. Default-off metric counters still have sampling overhead. |
+| 153 | CRITICAL SUBSYSTEM BUDGETS | **Partial / documented** — Minimal overlay/Off controls retained; diagnostic phase/budget evidence added. Default-off metric counters still have sampling overhead. |
+| 154 | STRESS TEST EXTREME ASSISTS | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 155 | HIGH BPM STRESS | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 156 | MARATHON STRESS | **Unqualified marathon** — Many repeated short maps were run, not one full-length marathon map. |
+| 157 | HIGH OBJECT COUNT MAPS | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 158 | MAPLAB EXTREME MAPS | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 159 | RESULT SCREEN STRESS | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 160 | CUSTOMIZATION STRESS | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 161 | SKIN COMPATIBILITY | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 162 | SKIN FALLBACK | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 163 | RETAIN DEFAULT READABILITY | **Scoped qualification** — Owned dense/high-CS/MapLab/slider contexts, multiple skins and mixed profiles. No exhaustive every-skin/every-map certification. |
+| 164 | FAILURE TESTING | **Partial / failures retained** — Blocked/failing writer and update rollback tested. Existing PP/replay failures and interrupted foreground test documented; not hidden as passes. |
+| 165 | NO SILENT FAILURE | **Partial / failures retained** — Blocked/failing writer and update rollback tested. Existing PP/replay failures and interrupted foreground test documented; not hidden as passes. |
+| 166 | FINAL TELEMETRY REVIEW | **Partial / failures retained** — Blocked/failing writer and update rollback tested. Existing PP/replay failures and interrupted foreground test documented; not hidden as passes. |
+| 167 | REQUIRED VERSION 1.3 PERFORMANCE REPORT | **Documented** — Required evidence-based report, with scoped results and remaining limits. |
+| 168 | REQUIRED CODE OPTIMIZATION REPORT | **Documented** — Required evidence-based report, with scoped results and remaining limits. |
+| 169 | REQUIRED FILE / REPOSITORY REPORT | **Documented** — Required evidence-based report, with scoped results and remaining limits. |
+| 170 | REQUIRED RESOURCE REPORT | **Documented** — Required evidence-based report, with scoped results and remaining limits. |
+| 171 | REQUIRED REGRESSION REPORT | **Documented** — Required evidence-based report, with scoped results and remaining limits. |
+| 172 | REQUIRED FINAL REPORT | **Documented** — Required evidence-based report, with scoped results and remaining limits. |
+| 173 | PRESERVE GITHUB HISTORY | **Prepared / publication separate** — Owner-managed repository updates preserve prior history; no force push or unrelated workspace commit. Publication confirmation belongs to delivery evidence. |
+| 174 | COMMIT LOGICALLY | **Prepared / publication separate** — Owner-managed repository updates preserve prior history; no force push or unrelated workspace commit. Publication confirmation belongs to delivery evidence. |
+| 175 | DO NOT COMMIT USER SECRETS | **Prepared / scanned** — Curated source/package inputs; private/build paths ignored, large dependencies kept as matching release assets. Repeat scan on sealed archive. |
+| 176 | GITIGNORE | **Prepared / scanned** — Curated source/package inputs; private/build paths ignored, large dependencies kept as matching release assets. Repeat scan on sealed archive. |
+| 177 | LARGE FILE AUDIT | **Prepared / scanned** — Curated source/package inputs; private/build paths ignored, large dependencies kept as matching release assets. Repeat scan on sealed archive. |
+| 178 | CI / AUTOMATED CHECKS | **Prepared / hosted run separate** — Linux archive integrity and dependent Windows portable-host/account/PP fixtures. Full hosted source/OpenGL build not certified. |
+| 179 | RELEASE BUILD SCRIPT | **Implemented / final seal separate** — Build, stage, corresponding-source archive and seal entry points documented. None installs over a player folder. |
+| 180 | FINAL VERSION 1.3 PRINCIPLE | **Partial release candidate** — Recurring overhead reduced; exact scoped outputs preserved. General faster tails, all replay correctness, uninterrupted 1–3 hours and all-PC qualification are not achieved. |
+| 181 | VERSION 1.3 SUCCESS CRITERIA | **Partial release candidate** — Recurring overhead reduced; exact scoped outputs preserved. General faster tails, all replay correctness, uninterrupted 1–3 hours and all-PC qualification are not achieved. |

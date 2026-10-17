@@ -2,7 +2,7 @@
 
 ## Install
 
-1. Download `Boshsu-1.2-clean.zip` from [Releases](https://github.com/hsob2nd/Boshsu/releases).
+1. Download `Boshsu-1.3-clean.zip` from [Releases](https://github.com/hsob2nd/Boshsu/releases).
 2. Extract the entire archive into a folder you can write to. Settings and player data are stored beside the client.
 3. Run `Boshsu.exe`. Keep the DLLs, materials, fonts, models, shaders and helper folders beside it.
 4. Use Profile to choose your display name and avatar. Renaming changes the displayed identity of the same profile; it does not create another account.

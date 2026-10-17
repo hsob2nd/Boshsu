@@ -2,13 +2,13 @@
 
 ## First-time download
 
-Download `Boshsu-1.2-clean.zip` from the official Releases page, extract the **whole ZIP** into a writable folder, then open **Boshsu.exe**. Do not run an executable inside the ZIP. Keep all included DLLs and resource folders together. Windows x64 and .NET Framework 4.8 are required; build tools and a separate PP calculator are not required. The source ZIP is for developers, not for playing.
+Download `Boshsu-1.3-clean.zip` from the official Releases page, extract the **whole ZIP** into a writable folder, then open **Boshsu.exe**. Do not run an executable inside the ZIP. Keep all included DLLs and resource folders together. Windows x64 and .NET Framework 4.8 are required; build tools and a separate PP calculator are not required. The source ZIP is for developers, not for playing.
 
 The client creates a fresh local profile. Maps and custom skins are not bundled; select your library in Options. First launch uses Main Menu, primary display, native resolution and fullscreen; your later changes are saved.
 
 ## Manual update, without the client updater or an internet connection
 
-1. Download `Boshsu-1.2-clean.zip` **and `SHA256SUMS.txt` from the same official release**. Keep their original filenames together.
+1. Download `Boshsu-1.3-clean.zip` **and `SHA256SUMS.txt` from the same official release**. Keep their original filenames together.
 2. Close the Boshsu installation you want to update.
 3. Double-click **Boshsu.Updater.exe** in your existing installation. If it predates RC5, extract the new complete ZIP into a separate folder and open its updater instead.
 4. Choose **Boshsu.exe in your existing installation**, the downloaded clean ZIP and its checksums file. The adjacent checksums file is selected automatically when available.
