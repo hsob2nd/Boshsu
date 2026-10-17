@@ -1,0 +1,994 @@
+--- a/stable-remastered/application/WindowsApplicationIdentity.cs
++++ b/stable-remastered/application/WindowsApplicationIdentity.cs
+@@ -0,0 +1,141 @@
++using System;
++using System.IO;
++using System.Runtime.InteropServices;
++using System.Runtime.InteropServices.ComTypes;
++using System.Text;
++using Microsoft.Win32;
++
++namespace StableRemastered.Application
++{
++    // Windows application discovery, not a recorder-specific game catalogue API.
++    // All persistent operations run once at startup or from the integration page.
++    internal static class WindowsApplicationIdentity
++    {
++        internal const string AppId="Bosh.Boshsu",OwnerValue="BoshsuOwner";
++        internal const string AppPathKey=@"Software\Microsoft\Windows\CurrentVersion\App Paths\Boshsu.exe";
++        internal const string ApplicationKey=@"Software\Classes\Applications\Boshsu.exe";
++        internal static string Status {get;private set;}="Windows registration has not run.";
++        internal static bool IsWindows=>Environment.OSVersion.Platform==PlatformID.Win32NT;
++        internal static string Executable=>System.Windows.Forms.Application.ExecutablePath;
++        internal static bool ShippingProcess=>IsWindows && Path.GetFileName(Executable).Equals("Boshsu.exe",StringComparison.OrdinalIgnoreCase)
++            && File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"BOSHSU_BUILD.json"))
++            && !new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory).Name.EndsWith("-qualification",StringComparison.OrdinalIgnoreCase)
++            && !File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"v01-qualification-run.json"))
++            && !File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"v03-interface-run.json"));
++
++        [DllImport("shell32.dll",CharSet=CharSet.Unicode)]
++        static extern int SetCurrentProcessExplicitAppUserModelID(string appId);
++
++        internal static void InitializeProcess()
++        {
++            if(!IsWindows)return;
++            try{Marshal.ThrowExceptionForHR(SetCurrentProcessExplicitAppUserModelID(AppId));}
++            catch(Exception e) when(Expected(e)){Status="Windows app identity unavailable: "+e.Message;}
++        }
++        internal static void ApplyPreference(bool enabled)
++        {
++            if(!ShippingProcess){Status="Windows registration is skipped for source/test hosts.";return;}
++            try{
++                string shortcut=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs),"Boshsu.lnk");
++                Apply(Registry.CurrentUser,Executable,shortcut,enabled);
++                Status=enabled?"Registered with Windows for this user.":"This copy's Windows registration is removed.";
++            }catch(Exception e) when(Expected(e)){Status="Windows registration could not finish: "+e.Message;}
++        }
++        static bool Expected(Exception e)=>e is IOException || e is UnauthorizedAccessException || e is System.Security.SecurityException || e is COMException || e is DllNotFoundException || e is EntryPointNotFoundException || e is PlatformNotSupportedException;
++        internal static string Command(string executable)=>"\""+executable+"\"";
++        static string Text(RegistryKey key,string name)=>key?.GetValue(name) as string;
++        static bool Same(string a,string b)=>string.Equals(a,b,StringComparison.OrdinalIgnoreCase);
++        static bool Owned(RegistryKey key,string targetName,string target)=>Text(key,OwnerValue)==AppId && Same(Text(key,targetName),target);
++        static void Write(RegistryKey key,string name,string value){if(!string.Equals(Text(key,name),value,StringComparison.Ordinal))key.SetValue(name,value,RegistryValueKind.String);}
++        static void CheckOwner(RegistryKey user,string path)
++        {
++            using(var key=user.OpenSubKey(path))if(key!=null && Text(key,OwnerValue)!=AppId)
++                throw new IOException("An existing Boshsu registration is owned by another installer; it was retained.");
++        }
++        // The root and shortcut are injectable so checks use an isolated registry
++        // subtree and workspace files, never the player's application registration.
++        internal static void Apply(RegistryKey user,string executable,string shortcut,bool enabled)
++        {
++            executable=Path.GetFullPath(executable);
++            if(!Path.GetFileName(executable).Equals("Boshsu.exe",StringComparison.OrdinalIgnoreCase) || executable.IndexOf('"')>=0 || executable.IndexOf('\0')>=0)
++                throw new ArgumentException("Select a Boshsu.exe application path.");
++            if(enabled){
++                if(!File.Exists(executable))throw new FileNotFoundException("Boshsu.exe was not found.",executable);
++                CheckOwner(user,AppPathKey);CheckOwner(user,ApplicationKey);
++                CheckShortcutOwner(shortcut);
++                using(var key=user.CreateSubKey(AppPathKey)){Write(key,OwnerValue,AppId);Write(key,"",executable);}
++                using(var key=user.CreateSubKey(ApplicationKey)){
++                    Write(key,OwnerValue,AppId);Write(key,"FriendlyAppName","Boshsu");Write(key,"ApplicationDescription","Boshsu rhythm game");Write(key,"BoshsuExecutable",executable);
++                    using(var icon=key.CreateSubKey("DefaultIcon"))Write(icon,"",Command(executable)+",0");
++                    using(var command=key.CreateSubKey(@"shell\open\command"))Write(command,"",Command(executable));
++                }
++                SaveShortcut(shortcut,executable);
++            }else{
++                bool pathOwned,appOwned;
++                using(var key=user.OpenSubKey(AppPathKey))pathOwned=Owned(key,"",executable);
++                using(var key=user.OpenSubKey(ApplicationKey))appOwned=Owned(key,"BoshsuExecutable",executable);
++                if(pathOwned)user.DeleteSubKeyTree(AppPathKey);
++                if(appOwned)user.DeleteSubKeyTree(ApplicationKey);
++                // A damaged shortcut must not prevent opting out of registry
++                // discovery. Retain that file and report its error afterward.
++                RemoveShortcut(shortcut,executable);
++            }
++        }
++        static bool ReadShortcut(string path,out string target,out string appId)
++        {
++            target=appId=null;if(!File.Exists(path))return false;
++            object link=new ShellLink();
++            try{
++                ((IPersistFile)link).Load(path,0);
++                var buffer=new StringBuilder(32768);((IShellLinkW)link).GetPath(buffer,buffer.Capacity,IntPtr.Zero,4);target=buffer.ToString();
++                var key=AppIdKey;PropVariant value;
++                Marshal.ThrowExceptionForHR(((IPropertyStore)link).GetValue(ref key,out value));
++                try{if(value.Type==31)appId=Marshal.PtrToStringUni(value.Pointer);}finally{PropVariantClear(ref value);}
++                return true;
++            }finally{Marshal.FinalReleaseComObject(link);}
++        }
++        static void CheckShortcutOwner(string path)
++        {
++            string target,id;if(ReadShortcut(path,out target,out id) && id!=AppId)
++                throw new IOException("An existing Boshsu shortcut is not application-owned; it was retained.");
++        }
++        static void SaveShortcut(string path,string executable)
++        {
++            string target,id;if(ReadShortcut(path,out target,out id) && id==AppId && Same(target,executable))return;
++            string temp=path+".tmp-"+Guid.NewGuid().ToString("N")+".lnk";object link=new ShellLink();
++            try{
++                Directory.CreateDirectory(Path.GetDirectoryName(path));
++                var shell=(IShellLinkW)link;shell.SetPath(executable);shell.SetWorkingDirectory(Path.GetDirectoryName(executable));shell.SetDescription("Boshsu rhythm game");shell.SetIconLocation(executable,0);
++                var key=AppIdKey;var value=new PropVariant{Type=31,Pointer=Marshal.StringToCoTaskMemUni(AppId)};
++                try{Marshal.ThrowExceptionForHR(((IPropertyStore)link).SetValue(ref key,ref value));Marshal.ThrowExceptionForHR(((IPropertyStore)link).Commit());}finally{PropVariantClear(ref value);}
++                ((IPersistFile)link).Save(temp,true);
++                if(File.Exists(path))File.Replace(temp,path,null);else File.Move(temp,path);
++            }finally{Marshal.FinalReleaseComObject(link);if(File.Exists(temp))File.Delete(temp);}
++        }
++        static void RemoveShortcut(string path,string executable)
++        {
++            string target,id;if(ReadShortcut(path,out target,out id) && id==AppId && Same(target,executable))File.Delete(path);
++        }
++        [StructLayout(LayoutKind.Sequential)]struct PropertyKey{public Guid Format;public uint Id;}
++        static PropertyKey AppIdKey=>new PropertyKey{Format=new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"),Id=5};
++        [StructLayout(LayoutKind.Explicit,Size=24)]struct PropVariant{[FieldOffset(0)]public ushort Type;[FieldOffset(8)]public IntPtr Pointer;}
++        [DllImport("ole32.dll")]static extern int PropVariantClear(ref PropVariant value);
++        [ComImport,Guid("00021401-0000-0000-C000-000000000046")]class ShellLink { }
++        [ComImport,Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]interface IPropertyStore
++        {
++            [PreserveSig]int GetCount(out uint count);[PreserveSig]int GetAt(uint index,out PropertyKey key);
++            [PreserveSig]int GetValue(ref PropertyKey key,out PropVariant value);[PreserveSig]int SetValue(ref PropertyKey key,ref PropVariant value);[PreserveSig]int Commit();
++        }
++        [ComImport,Guid("000214F9-0000-0000-C000-000000000046"),InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]interface IShellLinkW
++        {
++            void GetPath([Out,MarshalAs(UnmanagedType.LPWStr)]StringBuilder file,int size,IntPtr findData,uint flags);
++            void GetIDList(out IntPtr id);void SetIDList(IntPtr id);
++            void GetDescription([Out,MarshalAs(UnmanagedType.LPWStr)]StringBuilder text,int size);void SetDescription([MarshalAs(UnmanagedType.LPWStr)]string text);
++            void GetWorkingDirectory([Out,MarshalAs(UnmanagedType.LPWStr)]StringBuilder path,int size);void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)]string path);
++            void GetArguments([Out,MarshalAs(UnmanagedType.LPWStr)]StringBuilder args,int size);void SetArguments([MarshalAs(UnmanagedType.LPWStr)]string args);
++            void GetHotkey(out short key);void SetHotkey(short key);void GetShowCmd(out int command);void SetShowCmd(int command);
++            void GetIconLocation([Out,MarshalAs(UnmanagedType.LPWStr)]StringBuilder path,int size,out int index);void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)]string path,int index);
++            void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)]string path,uint reserved);void Resolve(IntPtr window,uint flags);void SetPath([MarshalAs(UnmanagedType.LPWStr)]string path);
++        }
++    }
++}
+--- a/stable-remastered/application/Program.cs
++++ b/stable-remastered/application/Program.cs
+@@ -21,7 +21,8 @@
+         [STAThread]
+         private static int Main(string[] arguments)
+         {
+-            // No updater, registration, repair, uninstall, credential import or old product launcher.
++            // The game owns its Windows identity; there is no legacy product launcher.
++            WindowsApplicationIdentity.InitializeProcess();
+             Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+             using(var diagnosticSession=DiagnosticSession.Start(OsuMain.UserPath))
+             {
+--- a/stable-remastered/application/ApplicationServices.cs
++++ b/stable-remastered/application/ApplicationServices.cs
+@@ -130,6 +130,7 @@
+             shuttingDown=false;
+             ClientUpdates=new Updates.GithubClientUpdates(AppDomain.CurrentDomain.BaseDirectory);
+             Shell.ShellPreferences.Load(osu.OsuMain.UserPath);
++            WindowsApplicationIdentity.ApplyPreference(Shell.ShellPreferences.Current.RegisterWithWindows);
+             string balanceWarning=V02Configuration.Load(AppDomain.CurrentDomain.BaseDirectory);
+             pWebRequest.AllowRequest=url=>Accounts?.Mode==StableRemastered.Accounts.AccountMode.Server && !shuttingDown;
+             Online=new DevelopmentOnlineCompatibility();Gameplay = new McOsuGameplayEngine();
+--- a/stable-remastered/application/Shell/ShellWindowsIntegration.cs
++++ b/stable-remastered/application/Shell/ShellWindowsIntegration.cs
+@@ -0,0 +1,24 @@
++using System;
++using StableRemastered.Shell;
++namespace StableRemastered.Application.Shell
++{
++    internal static partial class ShellPresentation
++    {
++        internal static void ShowWindowsIntegration()
++        {
++            Page("Windows integration","Application identity and discovery",d=>{
++                var c=d.Canvas;var r=d.Content;
++                c.Text("Boshsu · Windows registration",22,r.X,r.Y,r.Width,BoshTheme.Text,true);
++                c.Text("Adds this copy to Windows application records and the Start menu. Software that reads those records can find its name, icon and executable.",13,r.X,r.Y+44,r.Width,BoshTheme.Muted,false,.95f,64);
++                bool enabled=ShellPreferences.Current.RegisterWithWindows;
++                c.Button("Register with Windows  ·  "+(enabled?"On":"Off"),new ShellRect(r.X,r.Y+120,r.Width,38),()=>Safe(()=>{
++                    var next=ShellPreferences.Copy();next.RegisterWithWindows=!enabled;ShellPreferences.Save(next);
++                    WindowsApplicationIdentity.ApplyPreference(next.RegisterWithWindows);d.Reflow=true;
++                }));
++                c.Button("Repair registration for this copy",new ShellRect(r.X,r.Y+172,r.Width,38),()=>{WindowsApplicationIdentity.ApplyPreference(true);d.Reflow=true;},false,enabled);
++                c.Text(WindowsApplicationIdentity.Status,13,r.X,r.Y+228,r.Width,BoshTheme.Accent,false,.95f,64);
++                c.Text("Game recognition is controlled by each recording app. Windows registration does not add Boshsu to AMD or Insights' supported-game catalogue, or enable their automatic highlights.",13,r.X,r.Y+310,r.Width,BoshTheme.Muted,false,.95f,84);
++            });
++        }
++    }
++}
+--- a/stable-remastered/application/Shell/ShellSettingsPage.cs
++++ b/stable-remastered/application/Shell/ShellSettingsPage.cs
+@@ -1,121 +1,126 @@
+-using System;
+-using System.Linq;
+-using System.Collections.Generic;
+-using System.Globalization;
+-using osu;
+-using osu.GameModes.Options;
+-using osu.Graphics.Sprites;
+-using osu.Input.Handlers;
+-using Microsoft.Xna.Framework.Input;
+-using StableRemastered.Shell;
+-namespace StableRemastered.Application.Shell
+-{
+-    internal static partial class ShellPresentation
+-    {
+-        internal static readonly string[] SettingCategories={"Gameplay","Assists","Visuals","Audio","Performance","Map Lab","Profile","Cosmetics","Online / Worlds","Notifications","Advanced","Updates"};
+-        // Research sliders reserve a wide legacy label such as ": 100.00%".
+-        // The modern row already renders the actual live value separately.
+-        static string SliderTitle(string title)=>title!=null && title.StartsWith("Followpoint Timing",StringComparison.OrdinalIgnoreCase)?"Followpoint Timing":title!=null && title.StartsWith("Map Flip",StringComparison.OrdinalIgnoreCase)?"Map Flip":System.Text.RegularExpressions.Regex.Replace(title??"Setting",@":\s*[-+]?\d+(?:\.\d+)?\s*(?:%|x|ms|°)?\s*$","");
+-        static string OptionName(OptionElement item){string name=item.ShellTitle??(item as OptionCheckbox)?.Checkbox.Text??(item as OptionButton)?.Text??item.spriteManager.SpriteList.OfType<pText>().FirstOrDefault()?.Text??item.Keywords.FirstOrDefault()??"Setting";return FeatureName(item is OptionSlider?SliderTitle(name):name);}
+-        static string OptionCategoryName(OptionElement item)
+-        {
+-            var path=new List<string>();for(var p=item;p!=null;p=p.Parent)path.Add(string.Join(" ",p.Keywords));
+-            string text=string.Join(" ",path).ToLowerInvariant(),name=OptionName(item).ToLowerInvariant();
+-            if(name.Contains("map lab"))return "Map Lab";
+-            if(name=="map flip")return "Gameplay";
+-            if(name=="gameplay gamma")return "Visuals";
+-            if(name.Contains("prestige")||name.Contains("achievement"))return "Cosmetics";
+-            if(name.Contains("profile")||name.Contains("offline account"))return "Profile";
+-            if(text.Contains("cheats")||text.Contains("maxassist")||text.Contains("max assist")||text.Contains("personal")||text.Contains("aimcorrect")||text.Contains("relax")||text.Contains("timewarp")||text.Contains("cs changer")||text.Contains("reading ar"))return "Assists";
+-            if(text.Contains("audio")||text.Contains("sound")||text.Contains("volume")||text.Contains("offset"))return "Audio";
+-            if(text.Contains("frame")||text.Contains("thread")||text.Contains("performance"))return "Performance";
+-            if(text.Contains("graphics")||text.Contains("visual")||text.Contains("skin")||text.Contains("resolution")||text.Contains("fullscreen"))return "Visuals";
+-            if(text.Contains("online")||text.Contains("server")||text.Contains("network")||text.Contains("world"))return "Online / Worlds";
+-            if(text.Contains("gameplay")||text.Contains("input")||text.Contains("mouse")||text.Contains("keyboard"))return "Gameplay";
+-            return "Advanced";
+-        }
+-        internal static void ShowSettings(string category="Gameplay",string search="",int page=0)
+-        {
+-            if(category=="Updates" || new[]{"update","updates","github","download update"}.Contains((search??"").Trim().ToLowerInvariant())){ShowClientUpdates();return;}
+-            if(category=="Notifications"){ShowNotifications();return;}
+-            if(new[]{"notifications","notification","popups","pp notifications","achievement notifications"}.Contains((search??"").Trim().ToLowerInvariant())){ShowNotifications();return;}
+-            if(category=="Assists" && string.IsNullOrWhiteSpace(search)){ShowAssists();return;}
+-            var elements=GameBase.Options.ShellElements.Where(e=>!e.IsHeaderElement && !(e is OptionSection) && !(e is OptionText) && !e.Hidden).ToList();
+-            var visible=elements.Where(e=>string.IsNullOrWhiteSpace(search)?OptionCategoryName(e)==category:e.Match(search)).ToList();
+-            Page("Options","Existing gameplay bindings · modern presentation · search every setting",d=>{
+-                var c=d.Canvas;var r=d.Content;var input=c.Input(search,new ShellRect(r.X,r.Y,r.Width-122,36));input.CommitOnLeave=false;
+-                Action applySearch=()=>{if(d.Disposed)return;string query=input.Text;Replace(d,()=>ShowSettings(category,query));};input.OnCommit+=(s,commit)=>{if(commit)applySearch();};
+-                c.Button("Search",new ShellRect(r.Right-110,r.Y,110,36),applySearch);
+-                double tabWidth=r.Width/6;for(int n=0;n<SettingCategories.Length;n++){string next=SettingCategories[n];c.Button(next=="Online / Worlds"?"Online":next,new ShellRect(r.X+(n%6)*tabWidth,r.Y+48+(n/6)*36,tabWidth-6,30),()=>{
+-                    // Assists is one dedicated child page. Ordinary category
+-                    // switches remain replacements, so Back never grows a tab history.
+-                    if(next=="Assists"){Child(d,()=>ShowAssists());return;}
+-                    Replace(d,()=>{switch(next){case "Map Lab":ShowMapLab();break;case "Profile":ShowProfile();break;case "Performance":ShowPerformance();break;case "Cosmetics":ShowCustomization();break;case "Online / Worlds":ShowWorlds();break;default:ShowSettings(next);break;}});
+-                },category==next);}
+-                double start=r.Y+134;
+-                ScrollList(d,new ShellRect(r.X,start,r.Width,Math.Max(74,r.Bottom-38-start)),visible.Count,74,(n,row)=>DrawOption(d,visible[n],row));
+-                var returnParent=d.BackAction;d.Reopen=()=>WithParent(returnParent,()=>ShowSettings(category,search));
+-                if(visible.Count==0)c.Text("No matching settings. Try a shorter search.",15,r.X,start,r.Width,BoshTheme.Muted);
+-                c.Text(visible.Count+" settings · scroll or drag the bar · PgUp / PgDn",12,r.X,r.Bottom-26,r.Width,BoshTheme.Muted);
+-            });
+-        }
+-        static void DrawOption(BoshDialog d,OptionElement option,ShellRect r)
+-        {
+-            var c=d.Canvas;string name=OptionName(option);c.Rect(r,BoshTheme.Elevated,.92f);
+-            string scope=UnsupportedV1(option);
+-            if(scope!=null){c.Text(name,14,r.X+14,r.Y+8,r.Width-28,BoshTheme.Muted,false,.95f,24);c.Text(scope,12,r.X+14,r.Y+33,r.Width-28,BoshTheme.Warning,false,.95f,29);return;}
+-            var checkbox=option as OptionCheckbox;if(checkbox!=null){if(name=="Max Assist"&&checkbox.Checkbox.Checked!=CursorAssistOwnership.MaxEnabled)checkbox.Checkbox.Checked=CursorAssistOwnership.MaxEnabled;c.Text(name,14,r.X+14,r.Y+12,r.Width-132,null,false,.95f,42);var button=c.Button(checkbox.Checkbox.Checked?"On":"Off",new ShellRect(r.Right-102,r.Y+14,88,36),()=>Safe(()=>{if(name=="Max Assist"&&!checkbox.Checkbox.Checked)CursorAssistOwnership.SelectMaxAssist();checkbox.Checkbox.Checked=!checkbox.Checkbox.Checked;d.Reflow=true;},"Setting unavailable"),checkbox.Checkbox.Checked,checkbox.Enabled,option.Tooltip);return;}
+-            var slider=option as OptionSlider;if(slider!=null){
+-                if(name=="Map Flip"){
+-                    c.Text(name+" · independent of assists",14,r.X+14,r.Y+7,r.Width-28,null,false,.95f,24);
+-                    string[] labels={"Normal","Left / Right","Up / Down","Both"};double flipWidth=(r.Width-38)/4;
+-                    for(int n=0;n<labels.Length;n++){int mode=n;c.Button(labels[n],new ShellRect(r.X+10+n*(flipWidth+6),r.Y+32,flipWidth,30),()=>Safe(()=>{slider.Slider.SetValue(mode,false,true);d.Reflow=true;}),Math.Round(slider.Slider.Current)==mode,slider.Enabled,"Map orientation only. Applies on the next map load or retry, with any assist or none.");}
+-                    return;
+-                }
+-                if(name=="Gameplay Gamma"){
+-                    double current=osu.Configuration.ConfigManager.sGameplayGamma.Value;
+-                    c.ValueSlider("Gameplay Gamma · 1.00 neutral",new ShellRect(r.X+12,r.Y+7,r.Width-24,54),.5,2.5,.01,()=>current,v=>{current=v;osu.Configuration.ConfigManager.sGameplayGamma.Value=v;},null,false);
+-                    return;
+-                }
+-                if(name=="Followpoint Timing"){
+-                    c.Text(name,14,r.X+14,r.Y+7,r.Width-28,null,false,.95f,24);
+-                    double choiceWidth=(r.Width-32)/2;
+-                    for(int n=0;n<2;n++){int mode=n;c.Button(mode==0?"NM · Normal timing":"DT · Double Time timing",new ShellRect(r.X+10+n*(choiceWidth+12),r.Y+31,choiceWidth,29),()=>Safe(()=>{
+-                        slider.Slider.SetValue(mode,false,true);
+-                        (ApplicationServices.Gameplay as McOsuGameplayEngine)?.ApplyFollowpointTiming(mode==1);
+-                        d.Reflow=true;
+-                    }),Math.Round(slider.Slider.Current)==mode,slider.Enabled,mode==0?"Normal-speed followpoint animation timing, independent of playback rate.":"Double-Time followpoint animation timing, independent of playback rate.");}
+-                    return;
+-                }
+-                c.ScrollOwners.Add(r);
+-                c.Text(name,14,r.X+14,r.Y+7,r.Width-180,null,false,.95f,24);
+-                var value=c.Text(slider.ShellValueText,14,r.Right-157,r.Y+7,143,BoshTheme.Accent,true,.95f,24);
+-                double x=r.X+53,y=r.Y+44,width=r.Width-106;var track=c.Rect(new ShellRect(x,y-10,width,24),BoshTheme.Elevated,.944f);var line=c.Rect(new ShellRect(x,y,width,3),BoshTheme.Border,.945f);var fill=c.Rect(new ShellRect(x,y,1,3),BoshTheme.Accent,.946f);
+-                var knob=c.Rect(new ShellRect(x,y-4,3,11),BoshTheme.Accent,.947f);bool dragging=false,changed=false;double last=double.NaN;
+-                Action refresh=()=>{double current=slider.Slider.Current;if(current==last)return;last=current;double fraction=(current-slider.Slider.Min)/Math.Max(.00001,slider.Slider.Max-slider.Slider.Min);fill.VectorScale.X=(float)(width*fraction*c.Layout.Scale);knob.Position.X=(float)((x+width*fraction)*c.Layout.Scale);value.Text=slider.ShellValueText;track.ToolTip=slider.Slider.Tooltip??option.Tooltip;};
+-                track.HandleInput=slider.Enabled;track.ClickRequiresConfirmation=false;track.ToolTip=option.Tooltip;
+-                track.OnClick+=(s,e)=>{dragging=true;changed=false;};
+-                track.OnUpdate+=()=>{if(dragging){double next=slider.Slider.Min+(MouseManager.MousePosition.X/c.Layout.Scale-x)/width*(slider.Slider.Max-slider.Slider.Min);double step=slider.Slider.KeyboardControlIncrement;next=Math.Round(next/step)*step;double before=slider.Slider.Current;slider.Slider.SetValue(next,false,false);changed|=before!=slider.Slider.Current;if(MouseManager.MouseLeft==ButtonState.Released){dragging=false;if(changed)slider.Slider.OnValueChanged?.Invoke(true);}}refresh();};
+-                c.Button("−",new ShellRect(r.X+10,r.Y+33,32,28),()=>Safe(()=>slider.Slider.SetValue(slider.Slider.Current-slider.Slider.KeyboardControlIncrement,false,true)),false,slider.Enabled);
+-                c.Button("+",new ShellRect(r.Right-42,r.Y+33,32,28),()=>Safe(()=>slider.Slider.SetValue(slider.Slider.Current+slider.Slider.KeyboardControlIncrement,false,true)),false,slider.Enabled);refresh();return;
+-            }
+-            var dropdown=option as OptionDropdown;if(dropdown!=null){c.ScrollOwners.Add(r);c.Text(name,14,r.X+14,r.Y+7,r.Width-28,null,false,.95f,22);c.Button(dropdown.Dropdown.SelectedString??"Choose…",new ShellRect(r.X+10,r.Y+30,r.Width-20,31),()=>Child(d,()=>ShowOptionChoices(d,dropdown)),false,true,option.Tooltip);return;}
+-            var buttonOption=option as OptionButton;if(buttonOption!=null){c.Button(name,new ShellRect(r.X+10,r.Y+13,r.Width-20,40),()=>Safe(()=>{if(name.IndexOf("binding",StringComparison.OrdinalIgnoreCase)>=0 && name.IndexOf("mania",StringComparison.OrdinalIgnoreCase)<0){d.Close();ShowKeybindings();}else buttonOption.InvokeShell();}),false,buttonOption.Enabled,option.Tooltip);return;}
+-            var textbox=option as OptionTextbox;if(textbox!=null){c.Text(name,14,r.X+14,r.Y+6,r.Width-28);var input=c.Input(textbox.Textbox.Text,new ShellRect(r.X+10,r.Y+30,r.Width-110,31));c.Button("Save",new ShellRect(r.Right-90,r.Y+30,80,31),()=>Safe(()=>{textbox.Textbox.Text=input.Text;textbox.Textbox.CommitShell();}));return;}
+-            if(option is OptionSkinPreview){c.Button("Preview selected gameplay skin",new ShellRect(r.X+10,r.Y+13,r.Width-20,40),()=>{d.Close();ShowSkinPreview();});return;}
+-            c.Text(name,14,r.X+14,r.Y+13,r.Width-28,BoshTheme.Muted,false,.95f,43);
+-        }
+-        static string UnsupportedV1(OptionElement option)
+-        {
+-            return option.ShellSupport;
+-        }
+-        static void ShowOptionChoices(BoshDialog previous,OptionDropdown option,string search="",int page=0)
+-        {
+-            previous.Close();Page("Options",OptionName(option),d=>{var c=d.Canvas;var r=d.Content;var input=c.Input(search,new ShellRect(r.X,r.Y,r.Width,36));input.CommitOnLeave=false;input.OnCommit+=(s,commit)=>{if(commit&&!d.Disposed){string query=input.Text;Replace(d,()=>ShowOptionChoices(d,option,query));}};
+-                var choices=option.Dropdown.OptionsSprites.Where(p=>p.Tag!=null && p.Text.IndexOf(search,StringComparison.OrdinalIgnoreCase)>=0).ToList();
+-                ScrollList(d,new ShellRect(r.X,r.Y+54,r.Width,r.Height-92),choices.Count,42,(n,row)=>{var item=choices[n];bool supported=!(item.Tag is osu.GameModes.Play.Components.ScoreMeterType && (osu.GameModes.Play.Components.ScoreMeterType)item.Tag==osu.GameModes.Play.Components.ScoreMeterType.Colour);c.Button(item.Text,new ShellRect(row.X,row.Y,row.Width,35),()=>Safe(()=>{option.Dropdown.SetSelected(item.Tag,false);d.GoBack();}),Equals(item.Tag,option.Dropdown.SelectedObject),supported);});
+-                c.Text(choices.Count+" choices · scroll or drag the bar",12,r.X,r.Bottom-26,r.Width,BoshTheme.Muted);
+-            });
+-        }
+-    }
+-}
++using System;
++using System.Linq;
++using System.Collections.Generic;
++using System.Globalization;
++using osu;
++using osu.GameModes.Options;
++using osu.Graphics.Sprites;
++using osu.Input.Handlers;
++using Microsoft.Xna.Framework.Input;
++using StableRemastered.Shell;
++namespace StableRemastered.Application.Shell
++{
++    internal static partial class ShellPresentation
++    {
++        internal static readonly string[] SettingCategories={"Gameplay","Assists","Visuals","Audio","Performance","Map Lab","Profile","Cosmetics","Online / Worlds","Notifications","Advanced","Updates"};
++        // Research sliders reserve a wide legacy label such as ": 100.00%".
++        // The modern row already renders the actual live value separately.
++        static string SliderTitle(string title)=>title!=null && title.StartsWith("Followpoint Timing",StringComparison.OrdinalIgnoreCase)?"Followpoint Timing":title!=null && title.StartsWith("Map Flip",StringComparison.OrdinalIgnoreCase)?"Map Flip":System.Text.RegularExpressions.Regex.Replace(title??"Setting",@":\s*[-+]?\d+(?:\.\d+)?\s*(?:%|x|ms|°)?\s*$","");
++        static string OptionName(OptionElement item){string name=item.ShellTitle??(item as OptionCheckbox)?.Checkbox.Text??(item as OptionButton)?.Text??item.spriteManager.SpriteList.OfType<pText>().FirstOrDefault()?.Text??item.Keywords.FirstOrDefault()??"Setting";return FeatureName(item is OptionSlider?SliderTitle(name):name);}
++        static string OptionCategoryName(OptionElement item)
++        {
++            var path=new List<string>();for(var p=item;p!=null;p=p.Parent)path.Add(string.Join(" ",p.Keywords));
++            string text=string.Join(" ",path).ToLowerInvariant(),name=OptionName(item).ToLowerInvariant();
++            if(name.Contains("map lab"))return "Map Lab";
++            if(name=="map flip")return "Gameplay";
++            if(name=="gameplay gamma")return "Visuals";
++            if(name.Contains("prestige")||name.Contains("achievement"))return "Cosmetics";
++            if(name.Contains("profile")||name.Contains("offline account"))return "Profile";
++            if(text.Contains("cheats")||text.Contains("maxassist")||text.Contains("max assist")||text.Contains("personal")||text.Contains("aimcorrect")||text.Contains("relax")||text.Contains("timewarp")||text.Contains("cs changer")||text.Contains("reading ar"))return "Assists";
++            if(text.Contains("audio")||text.Contains("sound")||text.Contains("volume")||text.Contains("offset"))return "Audio";
++            if(text.Contains("frame")||text.Contains("thread")||text.Contains("performance"))return "Performance";
++            if(text.Contains("graphics")||text.Contains("visual")||text.Contains("skin")||text.Contains("resolution")||text.Contains("fullscreen"))return "Visuals";
++            if(text.Contains("online")||text.Contains("server")||text.Contains("network")||text.Contains("world"))return "Online / Worlds";
++            if(text.Contains("gameplay")||text.Contains("input")||text.Contains("mouse")||text.Contains("keyboard"))return "Gameplay";
++            return "Advanced";
++        }
++        internal static void ShowSettings(string category="Gameplay",string search="",int page=0)
++        {
++            if(new[]{"windows integration","windows registration","game detection","capture compatibility","recording"}.Contains((search??"").Trim().ToLowerInvariant())){ShowWindowsIntegration();return;}
++            if(category=="Updates" || new[]{"update","updates","github","download update"}.Contains((search??"").Trim().ToLowerInvariant())){ShowClientUpdates();return;}
++            if(category=="Notifications"){ShowNotifications();return;}
++            if(new[]{"notifications","notification","popups","pp notifications","achievement notifications"}.Contains((search??"").Trim().ToLowerInvariant())){ShowNotifications();return;}
++            if(category=="Assists" && string.IsNullOrWhiteSpace(search)){ShowAssists();return;}
++            var elements=GameBase.Options.ShellElements.Where(e=>!e.IsHeaderElement && !(e is OptionSection) && !(e is OptionText) && !e.Hidden).ToList();
++            var visible=elements.Where(e=>string.IsNullOrWhiteSpace(search)?OptionCategoryName(e)==category:e.Match(search)).ToList();
++            bool integration=category=="Advanced" && string.IsNullOrWhiteSpace(search);
++            Page("Options","Existing gameplay bindings · modern presentation · search every setting",d=>{
++                var c=d.Canvas;var r=d.Content;var input=c.Input(search,new ShellRect(r.X,r.Y,r.Width-122,36));input.CommitOnLeave=false;
++                Action applySearch=()=>{if(d.Disposed)return;string query=input.Text;Replace(d,()=>ShowSettings(category,query));};input.OnCommit+=(s,commit)=>{if(commit)applySearch();};
++                c.Button("Search",new ShellRect(r.Right-110,r.Y,110,36),applySearch);
++                double tabWidth=r.Width/6;for(int n=0;n<SettingCategories.Length;n++){string next=SettingCategories[n];c.Button(next=="Online / Worlds"?"Online":next,new ShellRect(r.X+(n%6)*tabWidth,r.Y+48+(n/6)*36,tabWidth-6,30),()=>{
++                    // Assists is one dedicated child page. Ordinary category
++                    // switches remain replacements, so Back never grows a tab history.
++                    if(next=="Assists"){Child(d,()=>ShowAssists());return;}
++                    Replace(d,()=>{switch(next){case "Map Lab":ShowMapLab();break;case "Profile":ShowProfile();break;case "Performance":ShowPerformance();break;case "Cosmetics":ShowCustomization();break;case "Online / Worlds":ShowWorlds();break;default:ShowSettings(next);break;}});
++                },category==next);}
++                double start=r.Y+134;
++                ScrollList(d,new ShellRect(r.X,start,r.Width,Math.Max(74,r.Bottom-38-start)),visible.Count+(integration?1:0),74,(n,row)=>{
++                    if(integration && n==0){c.Button("Windows integration · application discovery",new ShellRect(row.X,row.Y,row.Width,54),()=>Child(d,ShowWindowsIntegration));return;}
++                    DrawOption(d,visible[n-(integration?1:0)],row);
++                });
++                var returnParent=d.BackAction;d.Reopen=()=>WithParent(returnParent,()=>ShowSettings(category,search));
++                if(visible.Count==0 && !integration)c.Text("No matching settings. Try a shorter search.",15,r.X,start,r.Width,BoshTheme.Muted);
++                c.Text(visible.Count+" settings · scroll or drag the bar · PgUp / PgDn",12,r.X,r.Bottom-26,r.Width,BoshTheme.Muted);
++            });
++        }
++        static void DrawOption(BoshDialog d,OptionElement option,ShellRect r)
++        {
++            var c=d.Canvas;string name=OptionName(option);c.Rect(r,BoshTheme.Elevated,.92f);
++            string scope=UnsupportedV1(option);
++            if(scope!=null){c.Text(name,14,r.X+14,r.Y+8,r.Width-28,BoshTheme.Muted,false,.95f,24);c.Text(scope,12,r.X+14,r.Y+33,r.Width-28,BoshTheme.Warning,false,.95f,29);return;}
++            var checkbox=option as OptionCheckbox;if(checkbox!=null){if(name=="Max Assist"&&checkbox.Checkbox.Checked!=CursorAssistOwnership.MaxEnabled)checkbox.Checkbox.Checked=CursorAssistOwnership.MaxEnabled;c.Text(name,14,r.X+14,r.Y+12,r.Width-132,null,false,.95f,42);var button=c.Button(checkbox.Checkbox.Checked?"On":"Off",new ShellRect(r.Right-102,r.Y+14,88,36),()=>Safe(()=>{if(name=="Max Assist"&&!checkbox.Checkbox.Checked)CursorAssistOwnership.SelectMaxAssist();checkbox.Checkbox.Checked=!checkbox.Checkbox.Checked;d.Reflow=true;},"Setting unavailable"),checkbox.Checkbox.Checked,checkbox.Enabled,option.Tooltip);return;}
++            var slider=option as OptionSlider;if(slider!=null){
++                if(name=="Map Flip"){
++                    c.Text(name+" · independent of assists",14,r.X+14,r.Y+7,r.Width-28,null,false,.95f,24);
++                    string[] labels={"Normal","Left / Right","Up / Down","Both"};double flipWidth=(r.Width-38)/4;
++                    for(int n=0;n<labels.Length;n++){int mode=n;c.Button(labels[n],new ShellRect(r.X+10+n*(flipWidth+6),r.Y+32,flipWidth,30),()=>Safe(()=>{slider.Slider.SetValue(mode,false,true);d.Reflow=true;}),Math.Round(slider.Slider.Current)==mode,slider.Enabled,"Map orientation only. Applies on the next map load or retry, with any assist or none.");}
++                    return;
++                }
++                if(name=="Gameplay Gamma"){
++                    double current=osu.Configuration.ConfigManager.sGameplayGamma.Value;
++                    c.ValueSlider("Gameplay Gamma · 1.00 neutral",new ShellRect(r.X+12,r.Y+7,r.Width-24,54),.5,2.5,.01,()=>current,v=>{current=v;osu.Configuration.ConfigManager.sGameplayGamma.Value=v;},null,false);
++                    return;
++                }
++                if(name=="Followpoint Timing"){
++                    c.Text(name,14,r.X+14,r.Y+7,r.Width-28,null,false,.95f,24);
++                    double choiceWidth=(r.Width-32)/2;
++                    for(int n=0;n<2;n++){int mode=n;c.Button(mode==0?"NM · Normal timing":"DT · Double Time timing",new ShellRect(r.X+10+n*(choiceWidth+12),r.Y+31,choiceWidth,29),()=>Safe(()=>{
++                        slider.Slider.SetValue(mode,false,true);
++                        (ApplicationServices.Gameplay as McOsuGameplayEngine)?.ApplyFollowpointTiming(mode==1);
++                        d.Reflow=true;
++                    }),Math.Round(slider.Slider.Current)==mode,slider.Enabled,mode==0?"Normal-speed followpoint animation timing, independent of playback rate.":"Double-Time followpoint animation timing, independent of playback rate.");}
++                    return;
++                }
++                c.ScrollOwners.Add(r);
++                c.Text(name,14,r.X+14,r.Y+7,r.Width-180,null,false,.95f,24);
++                var value=c.Text(slider.ShellValueText,14,r.Right-157,r.Y+7,143,BoshTheme.Accent,true,.95f,24);
++                double x=r.X+53,y=r.Y+44,width=r.Width-106;var track=c.Rect(new ShellRect(x,y-10,width,24),BoshTheme.Elevated,.944f);var line=c.Rect(new ShellRect(x,y,width,3),BoshTheme.Border,.945f);var fill=c.Rect(new ShellRect(x,y,1,3),BoshTheme.Accent,.946f);
++                var knob=c.Rect(new ShellRect(x,y-4,3,11),BoshTheme.Accent,.947f);bool dragging=false,changed=false;double last=double.NaN;
++                Action refresh=()=>{double current=slider.Slider.Current;if(current==last)return;last=current;double fraction=(current-slider.Slider.Min)/Math.Max(.00001,slider.Slider.Max-slider.Slider.Min);fill.VectorScale.X=(float)(width*fraction*c.Layout.Scale);knob.Position.X=(float)((x+width*fraction)*c.Layout.Scale);value.Text=slider.ShellValueText;track.ToolTip=slider.Slider.Tooltip??option.Tooltip;};
++                track.HandleInput=slider.Enabled;track.ClickRequiresConfirmation=false;track.ToolTip=option.Tooltip;
++                track.OnClick+=(s,e)=>{dragging=true;changed=false;};
++                track.OnUpdate+=()=>{if(dragging){double next=slider.Slider.Min+(MouseManager.MousePosition.X/c.Layout.Scale-x)/width*(slider.Slider.Max-slider.Slider.Min);double step=slider.Slider.KeyboardControlIncrement;next=Math.Round(next/step)*step;double before=slider.Slider.Current;slider.Slider.SetValue(next,false,false);changed|=before!=slider.Slider.Current;if(MouseManager.MouseLeft==ButtonState.Released){dragging=false;if(changed)slider.Slider.OnValueChanged?.Invoke(true);}}refresh();};
++                c.Button("−",new ShellRect(r.X+10,r.Y+33,32,28),()=>Safe(()=>slider.Slider.SetValue(slider.Slider.Current-slider.Slider.KeyboardControlIncrement,false,true)),false,slider.Enabled);
++                c.Button("+",new ShellRect(r.Right-42,r.Y+33,32,28),()=>Safe(()=>slider.Slider.SetValue(slider.Slider.Current+slider.Slider.KeyboardControlIncrement,false,true)),false,slider.Enabled);refresh();return;
++            }
++            var dropdown=option as OptionDropdown;if(dropdown!=null){c.ScrollOwners.Add(r);c.Text(name,14,r.X+14,r.Y+7,r.Width-28,null,false,.95f,22);c.Button(dropdown.Dropdown.SelectedString??"Choose…",new ShellRect(r.X+10,r.Y+30,r.Width-20,31),()=>Child(d,()=>ShowOptionChoices(d,dropdown)),false,true,option.Tooltip);return;}
++            var buttonOption=option as OptionButton;if(buttonOption!=null){c.Button(name,new ShellRect(r.X+10,r.Y+13,r.Width-20,40),()=>Safe(()=>{if(name.IndexOf("binding",StringComparison.OrdinalIgnoreCase)>=0 && name.IndexOf("mania",StringComparison.OrdinalIgnoreCase)<0){d.Close();ShowKeybindings();}else buttonOption.InvokeShell();}),false,buttonOption.Enabled,option.Tooltip);return;}
++            var textbox=option as OptionTextbox;if(textbox!=null){c.Text(name,14,r.X+14,r.Y+6,r.Width-28);var input=c.Input(textbox.Textbox.Text,new ShellRect(r.X+10,r.Y+30,r.Width-110,31));c.Button("Save",new ShellRect(r.Right-90,r.Y+30,80,31),()=>Safe(()=>{textbox.Textbox.Text=input.Text;textbox.Textbox.CommitShell();}));return;}
++            if(option is OptionSkinPreview){c.Button("Preview selected gameplay skin",new ShellRect(r.X+10,r.Y+13,r.Width-20,40),()=>{d.Close();ShowSkinPreview();});return;}
++            c.Text(name,14,r.X+14,r.Y+13,r.Width-28,BoshTheme.Muted,false,.95f,43);
++        }
++        static string UnsupportedV1(OptionElement option)
++        {
++            return option.ShellSupport;
++        }
++        static void ShowOptionChoices(BoshDialog previous,OptionDropdown option,string search="",int page=0)
++        {
++            previous.Close();Page("Options",OptionName(option),d=>{var c=d.Canvas;var r=d.Content;var input=c.Input(search,new ShellRect(r.X,r.Y,r.Width,36));input.CommitOnLeave=false;input.OnCommit+=(s,commit)=>{if(commit&&!d.Disposed){string query=input.Text;Replace(d,()=>ShowOptionChoices(d,option,query));}};
++                var choices=option.Dropdown.OptionsSprites.Where(p=>p.Tag!=null && p.Text.IndexOf(search,StringComparison.OrdinalIgnoreCase)>=0).ToList();
++                ScrollList(d,new ShellRect(r.X,r.Y+54,r.Width,r.Height-92),choices.Count,42,(n,row)=>{var item=choices[n];bool supported=!(item.Tag is osu.GameModes.Play.Components.ScoreMeterType && (osu.GameModes.Play.Components.ScoreMeterType)item.Tag==osu.GameModes.Play.Components.ScoreMeterType.Colour);c.Button(item.Text,new ShellRect(row.X,row.Y,row.Width,35),()=>Safe(()=>{option.Dropdown.SetSelected(item.Tag,false);d.GoBack();}),Equals(item.Tag,option.Dropdown.SelectedObject),supported);});
++                c.Text(choices.Count+" choices · scroll or drag the bar",12,r.X,r.Bottom-26,r.Width,BoshTheme.Muted);
++            });
++        }
++    }
++}
+--- a/stable-remastered/application/Shell/ShellPresentation.cs
++++ b/stable-remastered/application/Shell/ShellPresentation.cs
+@@ -1,166 +1,167 @@
+-using System;
+-using System.Linq;
+-using System.Collections.Generic;
+-using System.Threading;
+-using System.Threading.Tasks;
+-using Microsoft.Xna.Framework.Graphics;
+-using osu;
+-using osu.Graphics.Notifications;
+-using osu.Graphics.Sprites;
+-using StableRemastered.Accounts;
+-using StableRemastered.Shell;
+-using StableRemastered.Application.Accounts;
+-namespace StableRemastered.Application.Shell
+-{
+-    internal static partial class ShellPresentation
+-    {
+-        static BoshDialog lastDialog;
+-        static Action forcedParent;
+-        static bool parentForced;
+-        internal static void ForgetRoute(BoshDialog d){if(lastDialog==d)lastDialog=null;}
+-        internal static void WithParent(Action parent,Action open){var previousParent=forcedParent;bool previousForced=parentForced;forcedParent=parent;parentForced=true;try{open();}finally{forcedParent=previousParent;parentForced=previousForced;}}
+-        static void Child(BoshDialog parent,Action open){var restore=parent.Reopen;parent.Close();WithParent(restore,open);}
+-        // Tabs replace the current page. Only real detail pages push a Back destination.
+-        internal static void Replace(BoshDialog current,Action open){var parent=current.BackAction;current.Close();WithParent(parent,open);}
+-        static BoshDialog RootPage(string name,string subtitle,Action<BoshDialog> build){BoshDialog result=null;WithParent(null,()=>result=Page(name,subtitle,build));return result;}
+-        internal static readonly string[] Destinations={"Profile","Customize","Achievements","Progression","Map Lab","Assists","Options","Performance","Worlds"};
+-        internal static void Open(string name)
+-        {
+-            switch(name){case "Profile":ShowProfile();break;case "Customize":ShowCustomization();break;case "Achievements":ShowAchievements();break;case "Progression":ShowProgression();break;case "Map Lab":ShowMapLab();break;case "Assists":ShowAssists();break;case "Performance":ShowPerformance();break;case "Worlds":ShowWorlds();break;default:ShowSettings();break;}
+-        }
+-        internal static BoshDialog Page(string name,string subtitle,Action<BoshDialog> build)
+-        {
+-            var dialog=new BoshDialog(name,subtitle);
+-            var previous=lastDialog;Action parent=null;
+-            if(parentForced)parent=forcedParent;
+-            else if(previous!=null && (previous.IsDisplayed || previous.ClosedAt==GameBase.Time))parent=previous.Heading==name?previous.BackAction:previous.Reopen;
+-            dialog.BackAction=parent;
+-            dialog.Reopen=()=>WithParent(parent,()=>Page(name,subtitle,build));
+-            lastDialog=dialog;
+-            dialog.Build=d=>{Navigation(d,name);build(d);};
+-            dialog.Render();GameBase.ShowDialog(dialog);ShellSounds.Play(ShellCue.MenuOpen);return dialog;
+-        }
+-        internal static void ShowSongActions(Action options,Action mode)
+-        {
+-            Page("Song Select","Map actions · familiar shortcuts remain available",d=>{var c=d.Canvas;var r=d.Content;int n=0;foreach(var item in new[]{Tuple.Create("Map options · F3",options),Tuple.Create("Game mode",mode),Tuple.Create("Generated Map Lab variants",(Action)(()=>{var map=osu.GameplayElements.Beatmaps.BeatmapManager.Current;if(map!=null)ShowMapLabVariants(map);})),Tuple.Create("PP details",(Action)(()=>PPDiagnostics.ShowSelected()))}){var selected=item;c.Button(selected.Item1,new ShellRect(r.X,r.Y+n++*54,r.Width,42),()=>{d.Close();selected.Item2?.Invoke();});}});
+-        }
+-        internal static void Navigate(BoshDialog dialog,string destination){dialog.Close();WithParent(null,()=>Open(destination));}
+-        static void Navigation(BoshDialog dialog,string selected)
+-        {
+-            var canvas=dialog.Canvas;var f=canvas.Layout.Frame;double x=f.X+20,w=canvas.Layout.Sidebar-40;
+-            canvas.Button("Search  ·  Ctrl K",new ShellRect(x,f.Y+70,w,34),()=>{dialog.Close();ShowSearch();});
+-            int index=0;foreach(var item in Destinations){string destination=item;canvas.Button(item,new ShellRect(x,f.Y+124+index++*36,w,32),()=>Navigate(dialog,destination),selected==item);}
+-            canvas.Text("Boshsu 1.2 · Standard",11,x,f.Bottom-28,w,BoshTheme.Muted);
+-        }
+-        static OfflineProfile CurrentProfile()=>ApplicationServices.Accounts.Store.Profiles().First(p=>p.Id==ApplicationServices.Accounts.ProfileId);
+-        static ProgressionState CurrentProgression()=>ApplicationServices.Accounts.Store.Progression(ApplicationServices.Accounts.ProfileId);
+-        static ShellIdentity Identity(BoshDialog dialog,OfflineProfile profile,ProgressionState state,ShellRect rect,CosmeticSelection preview=null,bool large=true)
+-        {
+-            var identity=new ShellIdentity(dialog.Canvas,rect,profile,state,ApplicationServices.Accounts.Profile?.Stats?.LocalPP?.Value,preview,large);
+-            dialog.Tick+=d=>identity.Tick();return identity;
+-        }
+-        static void Label(BoshDialog dialog,string title,string value,double x,double y,double width)
+-        {
+-            dialog.Canvas.Text(title,12,x,y,width,BoshTheme.Muted);
+-            dialog.Canvas.Text(value,23,x,y+21,width,BoshTheme.Text,true,.95f,33);
+-        }
+-        static void Error(string action,Exception error)
+-        {
+-            osu_common.Helpers.Logger.Log("Bosh shell / "+action+": "+error,osu_common.Helpers.LoggingTarget.Runtime);
+-            ShellNotifications.Post(action,"The change could not be completed. Your saved data is retained. Try again or inspect the development log.",true);
+-        }
+-        static void Safe(Action action,string name="Action unavailable"){try{action();}catch(Exception error){Error(name,error);}}
+-        internal static async void Save(BoshDialog dialog,Action action,Action after,string label)
+-        {
+-            if(dialog.Saving)return;dialog.Saving=true;
+-            try{await ShellWork.Run(token=>{token.ThrowIfCancellationRequested();action();return true;},CancellationToken.None).ConfigureAwait(false);
+-                GameBase.Scheduler.Add(()=>{dialog.Saving=false;if(ApplicationServices.IsShuttingDown)return;ApplicationServices.Accounts.RefreshIdentity();ShellNotifications.Post(label,"Saved to your existing profile.");ShellSounds.Play(ShellCue.Equip);if(!dialog.Disposed)after?.Invoke();},true);
+-            }catch(Exception error){GameBase.Scheduler.Add(()=>{dialog.Saving=false;if(!ApplicationServices.IsShuttingDown)Error(label,error);},true);}
+-        }
+-        internal static void ShowProfile(string tab="Overview",int page=0)
+-        {
+-            if(tab=="Showcase" && !EnsureCollection(()=>ShowProfile(tab,page)))return;
+-            var session=ApplicationServices.Accounts;var profile=CurrentProfile();var progress=CurrentProgression();
+-            var dialog=Page("Profile",V02Presentation.WorldName(session.Environment)+" · your existing offline identity",d=>{
+-                var c=d.Canvas;var r=d.Content;Identity(d,profile,progress,new ShellRect(r.X,r.Y,r.Width,144));
+-                string[] tabs={"Overview","Best plays","Recent plays","Showcase","Profiles"};for(int n=0;n<tabs.Length;n++){string next=tabs[n];c.Button(next,new ShellRect(r.X+n*(r.Width/tabs.Length),r.Y+158,r.Width/tabs.Length-8,34),()=>{d.Close();ShowProfile(next);},tab==next);}
+-                double y=r.Y+210;
+-                if(tab=="Overview"){
+-                    var stats=session.Profile?.Stats;Label(d,"ACCURACY",stats==null?"Loading…":(stats.Accuracy*100).ToString("0.00")+"%",r.X,y,r.Width/3);
+-                    Label(d,"PLAYCOUNT",stats?.Playcount.ToString("N0")??"—",r.X+r.Width/3,y,r.Width/3);Label(d,"LOCAL RANK",stats?.Rank==null?"—":"#"+stats.Rank,r.X+r.Width*2/3,y,r.Width/3);
+-                    c.Rule(r.X,y+72,r.Width);c.Text(ProgressionDisplay.State(progress),18,r.X,y+91,r.Width,BoshTheme.Secondary,true);
+-                    c.Text("Lifetime "+ProgressionDisplay.Multiplier(progress)+"  ·  "+ProgressionDisplay.Number(progress.XP)+" / "+ProgressionDisplay.Number(progress.RequiredXP)+" XP",13,r.X,y+121,r.Width,BoshTheme.Muted);
+-                    c.Rect(new ShellRect(r.X,y+150,r.Width,4),BoshTheme.Border);c.Rect(new ShellRect(r.X,y+150,r.Width*progress.Progress,4),BoshTheme.Accent,.93f);
+-                    c.Button("Edit identity",new ShellRect(r.X,r.Bottom-42,142,36),()=>Child(d,ShowIdentity));c.Button("Customize",new ShellRect(r.X+154,r.Bottom-42,142,36),()=>Navigate(d,"Customize"));
+-                }else if(tab=="Showcase"){
+-                    var featured=(profile.Cosmetics?.Showcase??new List<FeaturedCosmeticAchievement>()).ToList();if(featured.Count==0 && profile.Cosmetics?.FeaturedAchievement!=null)featured.Add(new FeaturedCosmeticAchievement{Id=profile.Cosmetics.FeaturedAchievement,World=profile.Cosmetics.FeaturedAchievementWorld});
+-                    for(int n=0;n<3;n++){var slot=n<featured.Count?featured[n]:null;var achievement=ScoreRewards.Catalogue.FirstOrDefault(a=>a.Id==slot?.Id);double top=y+n*66;c.Rect(new ShellRect(r.X,top,4,54),achievement==null?BoshTheme.Border:Rarity(achievement.Rarity),.944f);c.Button(achievement?.Title??"Choose an earned achievement",new ShellRect(r.X+12,top,r.Width-12,32),()=>Navigate(d,"Achievements"));string details=achievement==null?"Empty showcase slot":achievement.Rarity+" · "+V02Presentation.WorldName(slot.World);AchievementUnlock unlocked;if(slot!=null && slot.World==collection.World && collection.Unlocks.TryGetValue(slot.Id,out unlocked))details+=" · "+unlocked.Timestamp.LocalDateTime.ToString("d");c.Text(details,12,r.X+26,top+36,r.Width-38,BoshTheme.Muted);}
+-                    c.Text("Select an achievement in the collection to add or remove a showcase slot.",12,r.X,r.Bottom-30,r.Width,BoshTheme.Muted);
+-                }else if(tab=="Profiles"){
+-                    int n=0;foreach(var p in session.Store.Profiles().Skip(page*3).Take(3)){var item=p;c.Button(p.Username+(p.Id==profile.Id?"  ·  active":""),new ShellRect(r.X,y+n++*48,r.Width,40),()=>Safe(()=>{session.SwitchProfile(item.Id);d.Close();ShowProfile();},"Profile switch"),p.Id==profile.Id);}
+-                    c.Button("Create local profile",new ShellRect(r.X,r.Bottom-42,180,36),()=>Child(d,ShowCreateProfile));
+-                    if(page>0)c.Button("‹",new ShellRect(r.Right-88,r.Bottom-42,36,36),()=>{d.Close();ShowProfile(tab,page-1);});if((page+1)*3<session.Store.Profiles().Count)c.Button("›",new ShellRect(r.Right-40,r.Bottom-42,36,36),()=>{d.Close();ShowProfile(tab,page+1);});
+-                }else {
+-                    var plays=tab=="Best plays"?session.Best:session.Recent;int n=0;foreach(var play in plays.Skip(page*3).Take(3)){var selected=play;c.Button((play.Rank.HasValue?"#"+play.Rank+"  ":"")+play.Map+" ["+play.Difficulty+"]",new ShellRect(r.X,y+n*58,r.Width,34),()=>{d.Close();AccountPresentation.ShowPlay(selected);});c.Text((play.LocalPP?.Value.ToString("N2")??"—")+" local pp  ·  "+play.Accuracy.ToString("P2")+"  ·  "+play.Combo+"x  ·  "+(play.Timestamp?.LocalDateTime.ToString("d")??"Date unavailable"),12,r.X+14,y+35+n*58,r.Width-28,BoshTheme.Muted);n++;}
+-                    if(plays.Count==0)c.Text("No plays in this local world yet.",16,r.X,y,r.Width,BoshTheme.Muted);
+-                    if(page>0)c.Button("Previous",new ShellRect(r.X,r.Bottom-42,120,36),()=>{d.Close();ShowProfile(tab,page-1);});
+-                    if((page+1)*3<plays.Count)c.Button("Next",new ShellRect(r.Right-120,r.Bottom-42,120,36),()=>{d.Close();ShowProfile(tab,page+1);});
+-                }
+-            });
+-        }
+-        internal static void ShowIdentity()
+-        {
+-            var profile=CurrentProfile();var progress=CurrentProgression();
+-            Page("Profile","Edit your display identity without creating another account",d=>{
+-                var c=d.Canvas;var r=d.Content;Identity(d,profile,progress,new ShellRect(r.X,r.Y,r.Width,144));
+-                c.Text("Display name",14,r.X,r.Y+167,r.Width,BoshTheme.Muted);var input=c.Input(profile.Username,new ShellRect(r.X,r.Y+195,Math.Min(440,r.Width),36),32);
+-                c.Button("Save name",new ShellRect(r.X,r.Y+248,150,38),()=>Save(d,()=>ApplicationServices.Accounts.Store.RenameProfile(profile.Id,input.Text),()=>{d.Close();ShowProfile();},"Display name saved"));
+-                c.Button("Choose image",new ShellRect(r.X+162,r.Y+248,160,38),()=>Safe(()=>{
+-                    using(var chooser=new System.Windows.Forms.OpenFileDialog{Title="Choose profile picture",Filter="Images|*.png;*.jpg;*.jpeg;*.gif;*.bmp",CheckFileExists=true,Multiselect=false})if(DesktopFilePicker.Show(chooser)==System.Windows.Forms.DialogResult.OK){string file=chooser.FileName;Save(d,()=>ApplicationServices.Accounts.Store.SetAvatar(profile.Id,file),()=>{d.Close();ShowIdentity();},"Profile picture saved");}
+-                },"Profile picture unavailable"));
+-                c.Button("Default avatar",new ShellRect(r.X+334,r.Y+248,160,38),()=>Save(d,()=>ApplicationServices.Accounts.Store.SetAvatar(profile.Id,null),()=>{d.Close();ShowIdentity();},"Profile picture reset"));
+-                c.Text("PNG, JPEG, GIF or BMP. Images are center-cropped to fill your portrait.\nYour scores, progression, cosmetics and immutable profile ID stay with this account.",13,r.X,r.Y+310,r.Width,BoshTheme.Muted,false,.95f,55);
+-            });
+-        }
+-        static void ShowCreateProfile()
+-        {
+-            Page("Profile","Create a separate local profile · no email or password",d=>{var c=d.Canvas;var r=d.Content;c.Text("Display name",16,r.X,r.Y,r.Width);var input=c.Input("",new ShellRect(r.X,r.Y+40,Math.Min(440,r.Width),40),32);c.Button("Create profile",new ShellRect(r.X,r.Y+100,180,40),()=>Save(d,()=>ApplicationServices.Accounts.Store.CreateProfile(input.Text),()=>{d.Close();ShowProfile("Profiles");},"Local profile created"));});
+-        }
+-        internal static void ShowProgression()
+-        {
+-            var p=CurrentProgression();var profile=CurrentProfile();Page("Progression","Permanent progression · earned identity · local world",d=>{
+-                var c=d.Canvas;var r=d.Content;Identity(d,profile,p,new ShellRect(r.X,r.Y,r.Width,144));
+-                c.Text(ProgressionDisplay.State(p),28,r.X,r.Y+168,r.Width,BoshTheme.Secondary,true);
+-                c.Text(ProgressionDisplay.Number(p.XP)+" / "+ProgressionDisplay.Number(p.RequiredXP)+" XP  ·  Lifetime "+ProgressionDisplay.Multiplier(p),15,r.X,r.Y+210,r.Width,BoshTheme.Muted);
+-                c.Rect(new ShellRect(r.X,r.Y+248,r.Width,6),BoshTheme.Border);c.Rect(new ShellRect(r.X,r.Y+248,r.Width*p.Progress,6),BoshTheme.Accent,.93f);
+-                c.Text("Prestige → Master → Legend → Ultimate → Prestige Complete",14,r.X,r.Y+279,r.Width,BoshTheme.Text,false,.95f,40);
+-                c.Text("Earned rewards stay in your collection. Equip a favourite or use the highest earned style.",13,r.X,r.Y+329,r.Width,BoshTheme.Muted,false,.95f,42);
+-                c.Button("Open cosmetic collection",new ShellRect(r.X,r.Bottom-42,230,36),()=>Navigate(d,"Customize"));
+-                c.Button("History",new ShellRect(r.Right-126,r.Bottom-42,126,36),()=>Child(d,()=>ShowProgressionHistory()));
+-            });
+-        }
+-        internal static void ShowWorlds()
+-        {
+-            var session=ApplicationServices.Accounts;Page("Worlds","Local, cached server snapshot and private simulation remain separate ledgers",d=>{var c=d.Canvas;var r=d.Content;int n=0;foreach(OfflineEnvironment world in Enum.GetValues(typeof(OfflineEnvironment))){var selected=world;c.Button(V02Presentation.WorldName(world),new ShellRect(r.X,r.Y+n++*54,r.Width,44),()=>Safe(()=>{session.SwitchEnvironment(selected);d.Close();ShowWorlds();},"World switch"),session.Environment==world);}
+-                c.Text("Current world: "+V02Presentation.WorldName(session.Environment)+"\nServer Snapshot shows dated real data. Server Simulation changes only its local ledger.",15,r.X,r.Y+190,r.Width,BoshTheme.Muted,false,.95f,70);
+-                c.Button("Bosh online",new ShellRect(r.X,r.Y+270,260,38),()=>Child(d,ShowBoshOnline));
+-                c.Button("Standings / cached scores",new ShellRect(r.X,r.Y+320,260,40),()=>Child(d,()=>ShowStandings()));
+-            });
+-        }
+-        internal static void ShowSearch()
+-        {
+-            var parent=parentForced?forcedParent:lastDialog?.Reopen;var dialog=new BoshDialog("Search","Find features and settings · Esc returns to the previous screen"){FocusFirstInput=true,BackAction=parent};dialog.Reopen=()=>WithParent(parent,ShowSearch);lastDialog=dialog;
+-            dialog.Build=d=>{var c=d.Canvas;var r=d.Content;var input=c.Input("",new ShellRect(r.X,r.Y,r.Width,40));var entries=new List<Tuple<string,Action>>();foreach(var name in Destinations){string target=name;entries.Add(Tuple.Create(name,(Action)(()=>Open(target))));}foreach(var category in SettingCategories){string target=category;entries.Add(Tuple.Create(category+" settings",(Action)(()=>ShowSettings(target))));}
+-                foreach(var option in GameBase.Options.ShellElements.Where(o=>!o.IsHeaderElement && !(o is osu.GameModes.Options.OptionSection) && !o.Hidden)){string title=OptionName(option),category=OptionCategoryName(option);entries.Add(Tuple.Create(title,(Action)(()=>{if(category=="Assists")ShowAssists(AssistKey(option));else ShowSettings(category,title);})));if(title.Equals("aim correction",StringComparison.OrdinalIgnoreCase))entries.Insert(0,Tuple.Create("AC · aim correction",(Action)(()=>ShowAssists("Aim Correction"))));}
+-                entries.Add(Tuple.Create("Cosmetic loadouts",(Action)ShowLoadouts));entries.Add(Tuple.Create("Keyboard bindings",(Action)(()=>ShowKeybindings())));entries.Add(Tuple.Create("Gameplay skin preview",(Action)ShowSkinPreview));
+-                entries.Add(Tuple.Create("Notifications · PP / achievements / popups",(Action)ShowNotifications));
+-                entries.Add(Tuple.Create("PP system · providers / calculator",(Action)(()=>ShowPPSystems())));
+-                entries.Add(Tuple.Create("Maple Assist · V1 / V3",(Action)ShowMapleAssist));
+-                entries.Add(Tuple.Create("Bosh online · sign in / server profile",(Action)ShowBoshOnline));
+-                var buttons=new List<ShellButton>();for(int n=0;n<8;n++)buttons.Add(c.Button("",new ShellRect(r.X,r.Y+64+n*42,r.Width,34),null));
+-                Func<string,string> normalize=value=>new string((value??"").Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+-                Action filter=()=>{string query=normalize(input.Text);var matched=entries.Where(e=>normalize(e.Item1).Contains(query)).Take(8).ToList();for(int n=0;n<buttons.Count;n++){var button=buttons[n];bool show=n<matched.Count;button.Enabled=show;button.Surface.HandleInput=show;foreach(var sprite in new pSprite[]{button.Surface,button.Edge,button.Label})sprite.Bypass=!show;if(show){var entry=matched[n];button.Label.Text=entry.Item1;button.Action=()=>{d.Close();entry.Item2();};}}};input.OnChange+=(s,e)=>filter();filter();
+-            };dialog.Render();GameBase.ShowDialog(dialog);
+-        }
+-    }
+-}
++using System;
++using System.Linq;
++using System.Collections.Generic;
++using System.Threading;
++using System.Threading.Tasks;
++using Microsoft.Xna.Framework.Graphics;
++using osu;
++using osu.Graphics.Notifications;
++using osu.Graphics.Sprites;
++using StableRemastered.Accounts;
++using StableRemastered.Shell;
++using StableRemastered.Application.Accounts;
++namespace StableRemastered.Application.Shell
++{
++    internal static partial class ShellPresentation
++    {
++        static BoshDialog lastDialog;
++        static Action forcedParent;
++        static bool parentForced;
++        internal static void ForgetRoute(BoshDialog d){if(lastDialog==d)lastDialog=null;}
++        internal static void WithParent(Action parent,Action open){var previousParent=forcedParent;bool previousForced=parentForced;forcedParent=parent;parentForced=true;try{open();}finally{forcedParent=previousParent;parentForced=previousForced;}}
++        static void Child(BoshDialog parent,Action open){var restore=parent.Reopen;parent.Close();WithParent(restore,open);}
++        // Tabs replace the current page. Only real detail pages push a Back destination.
++        internal static void Replace(BoshDialog current,Action open){var parent=current.BackAction;current.Close();WithParent(parent,open);}
++        static BoshDialog RootPage(string name,string subtitle,Action<BoshDialog> build){BoshDialog result=null;WithParent(null,()=>result=Page(name,subtitle,build));return result;}
++        internal static readonly string[] Destinations={"Profile","Customize","Achievements","Progression","Map Lab","Assists","Options","Performance","Worlds"};
++        internal static void Open(string name)
++        {
++            switch(name){case "Profile":ShowProfile();break;case "Customize":ShowCustomization();break;case "Achievements":ShowAchievements();break;case "Progression":ShowProgression();break;case "Map Lab":ShowMapLab();break;case "Assists":ShowAssists();break;case "Performance":ShowPerformance();break;case "Worlds":ShowWorlds();break;default:ShowSettings();break;}
++        }
++        internal static BoshDialog Page(string name,string subtitle,Action<BoshDialog> build)
++        {
++            var dialog=new BoshDialog(name,subtitle);
++            var previous=lastDialog;Action parent=null;
++            if(parentForced)parent=forcedParent;
++            else if(previous!=null && (previous.IsDisplayed || previous.ClosedAt==GameBase.Time))parent=previous.Heading==name?previous.BackAction:previous.Reopen;
++            dialog.BackAction=parent;
++            dialog.Reopen=()=>WithParent(parent,()=>Page(name,subtitle,build));
++            lastDialog=dialog;
++            dialog.Build=d=>{Navigation(d,name);build(d);};
++            dialog.Render();GameBase.ShowDialog(dialog);ShellSounds.Play(ShellCue.MenuOpen);return dialog;
++        }
++        internal static void ShowSongActions(Action options,Action mode)
++        {
++            Page("Song Select","Map actions · familiar shortcuts remain available",d=>{var c=d.Canvas;var r=d.Content;int n=0;foreach(var item in new[]{Tuple.Create("Map options · F3",options),Tuple.Create("Game mode",mode),Tuple.Create("Generated Map Lab variants",(Action)(()=>{var map=osu.GameplayElements.Beatmaps.BeatmapManager.Current;if(map!=null)ShowMapLabVariants(map);})),Tuple.Create("PP details",(Action)(()=>PPDiagnostics.ShowSelected()))}){var selected=item;c.Button(selected.Item1,new ShellRect(r.X,r.Y+n++*54,r.Width,42),()=>{d.Close();selected.Item2?.Invoke();});}});
++        }
++        internal static void Navigate(BoshDialog dialog,string destination){dialog.Close();WithParent(null,()=>Open(destination));}
++        static void Navigation(BoshDialog dialog,string selected)
++        {
++            var canvas=dialog.Canvas;var f=canvas.Layout.Frame;double x=f.X+20,w=canvas.Layout.Sidebar-40;
++            canvas.Button("Search  ·  Ctrl K",new ShellRect(x,f.Y+70,w,34),()=>{dialog.Close();ShowSearch();});
++            int index=0;foreach(var item in Destinations){string destination=item;canvas.Button(item,new ShellRect(x,f.Y+124+index++*36,w,32),()=>Navigate(dialog,destination),selected==item);}
++            canvas.Text("Boshsu 1.2 · Standard",11,x,f.Bottom-28,w,BoshTheme.Muted);
++        }
++        static OfflineProfile CurrentProfile()=>ApplicationServices.Accounts.Store.Profiles().First(p=>p.Id==ApplicationServices.Accounts.ProfileId);
++        static ProgressionState CurrentProgression()=>ApplicationServices.Accounts.Store.Progression(ApplicationServices.Accounts.ProfileId);
++        static ShellIdentity Identity(BoshDialog dialog,OfflineProfile profile,ProgressionState state,ShellRect rect,CosmeticSelection preview=null,bool large=true)
++        {
++            var identity=new ShellIdentity(dialog.Canvas,rect,profile,state,ApplicationServices.Accounts.Profile?.Stats?.LocalPP?.Value,preview,large);
++            dialog.Tick+=d=>identity.Tick();return identity;
++        }
++        static void Label(BoshDialog dialog,string title,string value,double x,double y,double width)
++        {
++            dialog.Canvas.Text(title,12,x,y,width,BoshTheme.Muted);
++            dialog.Canvas.Text(value,23,x,y+21,width,BoshTheme.Text,true,.95f,33);
++        }
++        static void Error(string action,Exception error)
++        {
++            osu_common.Helpers.Logger.Log("Bosh shell / "+action+": "+error,osu_common.Helpers.LoggingTarget.Runtime);
++            ShellNotifications.Post(action,"The change could not be completed. Your saved data is retained. Try again or inspect the development log.",true);
++        }
++        static void Safe(Action action,string name="Action unavailable"){try{action();}catch(Exception error){Error(name,error);}}
++        internal static async void Save(BoshDialog dialog,Action action,Action after,string label)
++        {
++            if(dialog.Saving)return;dialog.Saving=true;
++            try{await ShellWork.Run(token=>{token.ThrowIfCancellationRequested();action();return true;},CancellationToken.None).ConfigureAwait(false);
++                GameBase.Scheduler.Add(()=>{dialog.Saving=false;if(ApplicationServices.IsShuttingDown)return;ApplicationServices.Accounts.RefreshIdentity();ShellNotifications.Post(label,"Saved to your existing profile.");ShellSounds.Play(ShellCue.Equip);if(!dialog.Disposed)after?.Invoke();},true);
++            }catch(Exception error){GameBase.Scheduler.Add(()=>{dialog.Saving=false;if(!ApplicationServices.IsShuttingDown)Error(label,error);},true);}
++        }
++        internal static void ShowProfile(string tab="Overview",int page=0)
++        {
++            if(tab=="Showcase" && !EnsureCollection(()=>ShowProfile(tab,page)))return;
++            var session=ApplicationServices.Accounts;var profile=CurrentProfile();var progress=CurrentProgression();
++            var dialog=Page("Profile",V02Presentation.WorldName(session.Environment)+" · your existing offline identity",d=>{
++                var c=d.Canvas;var r=d.Content;Identity(d,profile,progress,new ShellRect(r.X,r.Y,r.Width,144));
++                string[] tabs={"Overview","Best plays","Recent plays","Showcase","Profiles"};for(int n=0;n<tabs.Length;n++){string next=tabs[n];c.Button(next,new ShellRect(r.X+n*(r.Width/tabs.Length),r.Y+158,r.Width/tabs.Length-8,34),()=>{d.Close();ShowProfile(next);},tab==next);}
++                double y=r.Y+210;
++                if(tab=="Overview"){
++                    var stats=session.Profile?.Stats;Label(d,"ACCURACY",stats==null?"Loading…":(stats.Accuracy*100).ToString("0.00")+"%",r.X,y,r.Width/3);
++                    Label(d,"PLAYCOUNT",stats?.Playcount.ToString("N0")??"—",r.X+r.Width/3,y,r.Width/3);Label(d,"LOCAL RANK",stats?.Rank==null?"—":"#"+stats.Rank,r.X+r.Width*2/3,y,r.Width/3);
++                    c.Rule(r.X,y+72,r.Width);c.Text(ProgressionDisplay.State(progress),18,r.X,y+91,r.Width,BoshTheme.Secondary,true);
++                    c.Text("Lifetime "+ProgressionDisplay.Multiplier(progress)+"  ·  "+ProgressionDisplay.Number(progress.XP)+" / "+ProgressionDisplay.Number(progress.RequiredXP)+" XP",13,r.X,y+121,r.Width,BoshTheme.Muted);
++                    c.Rect(new ShellRect(r.X,y+150,r.Width,4),BoshTheme.Border);c.Rect(new ShellRect(r.X,y+150,r.Width*progress.Progress,4),BoshTheme.Accent,.93f);
++                    c.Button("Edit identity",new ShellRect(r.X,r.Bottom-42,142,36),()=>Child(d,ShowIdentity));c.Button("Customize",new ShellRect(r.X+154,r.Bottom-42,142,36),()=>Navigate(d,"Customize"));
++                }else if(tab=="Showcase"){
++                    var featured=(profile.Cosmetics?.Showcase??new List<FeaturedCosmeticAchievement>()).ToList();if(featured.Count==0 && profile.Cosmetics?.FeaturedAchievement!=null)featured.Add(new FeaturedCosmeticAchievement{Id=profile.Cosmetics.FeaturedAchievement,World=profile.Cosmetics.FeaturedAchievementWorld});
++                    for(int n=0;n<3;n++){var slot=n<featured.Count?featured[n]:null;var achievement=ScoreRewards.Catalogue.FirstOrDefault(a=>a.Id==slot?.Id);double top=y+n*66;c.Rect(new ShellRect(r.X,top,4,54),achievement==null?BoshTheme.Border:Rarity(achievement.Rarity),.944f);c.Button(achievement?.Title??"Choose an earned achievement",new ShellRect(r.X+12,top,r.Width-12,32),()=>Navigate(d,"Achievements"));string details=achievement==null?"Empty showcase slot":achievement.Rarity+" · "+V02Presentation.WorldName(slot.World);AchievementUnlock unlocked;if(slot!=null && slot.World==collection.World && collection.Unlocks.TryGetValue(slot.Id,out unlocked))details+=" · "+unlocked.Timestamp.LocalDateTime.ToString("d");c.Text(details,12,r.X+26,top+36,r.Width-38,BoshTheme.Muted);}
++                    c.Text("Select an achievement in the collection to add or remove a showcase slot.",12,r.X,r.Bottom-30,r.Width,BoshTheme.Muted);
++                }else if(tab=="Profiles"){
++                    int n=0;foreach(var p in session.Store.Profiles().Skip(page*3).Take(3)){var item=p;c.Button(p.Username+(p.Id==profile.Id?"  ·  active":""),new ShellRect(r.X,y+n++*48,r.Width,40),()=>Safe(()=>{session.SwitchProfile(item.Id);d.Close();ShowProfile();},"Profile switch"),p.Id==profile.Id);}
++                    c.Button("Create local profile",new ShellRect(r.X,r.Bottom-42,180,36),()=>Child(d,ShowCreateProfile));
++                    if(page>0)c.Button("‹",new ShellRect(r.Right-88,r.Bottom-42,36,36),()=>{d.Close();ShowProfile(tab,page-1);});if((page+1)*3<session.Store.Profiles().Count)c.Button("›",new ShellRect(r.Right-40,r.Bottom-42,36,36),()=>{d.Close();ShowProfile(tab,page+1);});
++                }else {
++                    var plays=tab=="Best plays"?session.Best:session.Recent;int n=0;foreach(var play in plays.Skip(page*3).Take(3)){var selected=play;c.Button((play.Rank.HasValue?"#"+play.Rank+"  ":"")+play.Map+" ["+play.Difficulty+"]",new ShellRect(r.X,y+n*58,r.Width,34),()=>{d.Close();AccountPresentation.ShowPlay(selected);});c.Text((play.LocalPP?.Value.ToString("N2")??"—")+" local pp  ·  "+play.Accuracy.ToString("P2")+"  ·  "+play.Combo+"x  ·  "+(play.Timestamp?.LocalDateTime.ToString("d")??"Date unavailable"),12,r.X+14,y+35+n*58,r.Width-28,BoshTheme.Muted);n++;}
++                    if(plays.Count==0)c.Text("No plays in this local world yet.",16,r.X,y,r.Width,BoshTheme.Muted);
++                    if(page>0)c.Button("Previous",new ShellRect(r.X,r.Bottom-42,120,36),()=>{d.Close();ShowProfile(tab,page-1);});
++                    if((page+1)*3<plays.Count)c.Button("Next",new ShellRect(r.Right-120,r.Bottom-42,120,36),()=>{d.Close();ShowProfile(tab,page+1);});
++                }
++            });
++        }
++        internal static void ShowIdentity()
++        {
++            var profile=CurrentProfile();var progress=CurrentProgression();
++            Page("Profile","Edit your display identity without creating another account",d=>{
++                var c=d.Canvas;var r=d.Content;Identity(d,profile,progress,new ShellRect(r.X,r.Y,r.Width,144));
++                c.Text("Display name",14,r.X,r.Y+167,r.Width,BoshTheme.Muted);var input=c.Input(profile.Username,new ShellRect(r.X,r.Y+195,Math.Min(440,r.Width),36),32);
++                c.Button("Save name",new ShellRect(r.X,r.Y+248,150,38),()=>Save(d,()=>ApplicationServices.Accounts.Store.RenameProfile(profile.Id,input.Text),()=>{d.Close();ShowProfile();},"Display name saved"));
++                c.Button("Choose image",new ShellRect(r.X+162,r.Y+248,160,38),()=>Safe(()=>{
++                    using(var chooser=new System.Windows.Forms.OpenFileDialog{Title="Choose profile picture",Filter="Images|*.png;*.jpg;*.jpeg;*.gif;*.bmp",CheckFileExists=true,Multiselect=false})if(DesktopFilePicker.Show(chooser)==System.Windows.Forms.DialogResult.OK){string file=chooser.FileName;Save(d,()=>ApplicationServices.Accounts.Store.SetAvatar(profile.Id,file),()=>{d.Close();ShowIdentity();},"Profile picture saved");}
++                },"Profile picture unavailable"));
++                c.Button("Default avatar",new ShellRect(r.X+334,r.Y+248,160,38),()=>Save(d,()=>ApplicationServices.Accounts.Store.SetAvatar(profile.Id,null),()=>{d.Close();ShowIdentity();},"Profile picture reset"));
++                c.Text("PNG, JPEG, GIF or BMP. Images are center-cropped to fill your portrait.\nYour scores, progression, cosmetics and immutable profile ID stay with this account.",13,r.X,r.Y+310,r.Width,BoshTheme.Muted,false,.95f,55);
++            });
++        }
++        static void ShowCreateProfile()
++        {
++            Page("Profile","Create a separate local profile · no email or password",d=>{var c=d.Canvas;var r=d.Content;c.Text("Display name",16,r.X,r.Y,r.Width);var input=c.Input("",new ShellRect(r.X,r.Y+40,Math.Min(440,r.Width),40),32);c.Button("Create profile",new ShellRect(r.X,r.Y+100,180,40),()=>Save(d,()=>ApplicationServices.Accounts.Store.CreateProfile(input.Text),()=>{d.Close();ShowProfile("Profiles");},"Local profile created"));});
++        }
++        internal static void ShowProgression()
++        {
++            var p=CurrentProgression();var profile=CurrentProfile();Page("Progression","Permanent progression · earned identity · local world",d=>{
++                var c=d.Canvas;var r=d.Content;Identity(d,profile,p,new ShellRect(r.X,r.Y,r.Width,144));
++                c.Text(ProgressionDisplay.State(p),28,r.X,r.Y+168,r.Width,BoshTheme.Secondary,true);
++                c.Text(ProgressionDisplay.Number(p.XP)+" / "+ProgressionDisplay.Number(p.RequiredXP)+" XP  ·  Lifetime "+ProgressionDisplay.Multiplier(p),15,r.X,r.Y+210,r.Width,BoshTheme.Muted);
++                c.Rect(new ShellRect(r.X,r.Y+248,r.Width,6),BoshTheme.Border);c.Rect(new ShellRect(r.X,r.Y+248,r.Width*p.Progress,6),BoshTheme.Accent,.93f);
++                c.Text("Prestige → Master → Legend → Ultimate → Prestige Complete",14,r.X,r.Y+279,r.Width,BoshTheme.Text,false,.95f,40);
++                c.Text("Earned rewards stay in your collection. Equip a favourite or use the highest earned style.",13,r.X,r.Y+329,r.Width,BoshTheme.Muted,false,.95f,42);
++                c.Button("Open cosmetic collection",new ShellRect(r.X,r.Bottom-42,230,36),()=>Navigate(d,"Customize"));
++                c.Button("History",new ShellRect(r.Right-126,r.Bottom-42,126,36),()=>Child(d,()=>ShowProgressionHistory()));
++            });
++        }
++        internal static void ShowWorlds()
++        {
++            var session=ApplicationServices.Accounts;Page("Worlds","Local, cached server snapshot and private simulation remain separate ledgers",d=>{var c=d.Canvas;var r=d.Content;int n=0;foreach(OfflineEnvironment world in Enum.GetValues(typeof(OfflineEnvironment))){var selected=world;c.Button(V02Presentation.WorldName(world),new ShellRect(r.X,r.Y+n++*54,r.Width,44),()=>Safe(()=>{session.SwitchEnvironment(selected);d.Close();ShowWorlds();},"World switch"),session.Environment==world);}
++                c.Text("Current world: "+V02Presentation.WorldName(session.Environment)+"\nServer Snapshot shows dated real data. Server Simulation changes only its local ledger.",15,r.X,r.Y+190,r.Width,BoshTheme.Muted,false,.95f,70);
++                c.Button("Bosh online",new ShellRect(r.X,r.Y+270,260,38),()=>Child(d,ShowBoshOnline));
++                c.Button("Standings / cached scores",new ShellRect(r.X,r.Y+320,260,40),()=>Child(d,()=>ShowStandings()));
++            });
++        }
++        internal static void ShowSearch()
++        {
++            var parent=parentForced?forcedParent:lastDialog?.Reopen;var dialog=new BoshDialog("Search","Find features and settings · Esc returns to the previous screen"){FocusFirstInput=true,BackAction=parent};dialog.Reopen=()=>WithParent(parent,ShowSearch);lastDialog=dialog;
++            dialog.Build=d=>{var c=d.Canvas;var r=d.Content;var input=c.Input("",new ShellRect(r.X,r.Y,r.Width,40));var entries=new List<Tuple<string,Action>>();foreach(var name in Destinations){string target=name;entries.Add(Tuple.Create(name,(Action)(()=>Open(target))));}foreach(var category in SettingCategories){string target=category;entries.Add(Tuple.Create(category+" settings",(Action)(()=>ShowSettings(target))));}
++                foreach(var option in GameBase.Options.ShellElements.Where(o=>!o.IsHeaderElement && !(o is osu.GameModes.Options.OptionSection) && !o.Hidden)){string title=OptionName(option),category=OptionCategoryName(option);entries.Add(Tuple.Create(title,(Action)(()=>{if(category=="Assists")ShowAssists(AssistKey(option));else ShowSettings(category,title);})));if(title.Equals("aim correction",StringComparison.OrdinalIgnoreCase))entries.Insert(0,Tuple.Create("AC · aim correction",(Action)(()=>ShowAssists("Aim Correction"))));}
++                entries.Add(Tuple.Create("Cosmetic loadouts",(Action)ShowLoadouts));entries.Add(Tuple.Create("Keyboard bindings",(Action)(()=>ShowKeybindings())));entries.Add(Tuple.Create("Gameplay skin preview",(Action)ShowSkinPreview));
++                entries.Add(Tuple.Create("Notifications · PP / achievements / popups",(Action)ShowNotifications));
++                entries.Add(Tuple.Create("PP system · providers / calculator",(Action)(()=>ShowPPSystems())));
++                entries.Add(Tuple.Create("Maple Assist · V1 / V3",(Action)ShowMapleAssist));
++                entries.Add(Tuple.Create("Bosh online · sign in / server profile",(Action)ShowBoshOnline));
++                entries.Add(Tuple.Create("Windows integration · registration / game detection / recording",(Action)ShowWindowsIntegration));
++                var buttons=new List<ShellButton>();for(int n=0;n<8;n++)buttons.Add(c.Button("",new ShellRect(r.X,r.Y+64+n*42,r.Width,34),null));
++                Func<string,string> normalize=value=>new string((value??"").Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
++                Action filter=()=>{string query=normalize(input.Text);var matched=entries.Where(e=>normalize(e.Item1).Contains(query)).Take(8).ToList();for(int n=0;n<buttons.Count;n++){var button=buttons[n];bool show=n<matched.Count;button.Enabled=show;button.Surface.HandleInput=show;foreach(var sprite in new pSprite[]{button.Surface,button.Edge,button.Label})sprite.Bypass=!show;if(show){var entry=matched[n];button.Label.Text=entry.Item1;button.Action=()=>{d.Close();entry.Item2();};}}};input.OnChange+=(s,e)=>filter();filter();
++            };dialog.Render();GameBase.ShowDialog(dialog);
++        }
++    }
++}
+--- a/stable-remastered/application/Shell/ShellClientUpdates.cs
++++ b/stable-remastered/application/Shell/ShellClientUpdates.cs
+@@ -10,7 +10,7 @@
+             var updater=ApplicationServices.ClientUpdates;
+             Page("Updates","GitHub releases · verified portable updates · your data stays yours",d=>{
+                 var c=d.Canvas;var r=d.Content;var s=updater.Status;
+-                c.Text("BOSHSU 1.2 RC4",22,r.X,r.Y,r.Width,BoshTheme.Text,true);
++                c.Text("BOSHSU 1.2 RC5",22,r.X,r.Y,r.Width,BoshTheme.Text,true);
+                 c.Text("Current: "+ClientRelease.Tag+"  ·  GitHub / "+ClientRelease.Repository,12,r.X,r.Y+36,r.Width,BoshTheme.Muted);
+                 var message=c.Text(s.Message,16,r.X,r.Y+78,r.Width,s.State=="Error"?BoshTheme.Negative:BoshTheme.Accent,false,.95f,58);
+                 c.Text(s.Tag==null?"":("New release: "+s.Tag),18,r.X,r.Y+140,r.Width,BoshTheme.Text,true);
+--- a/stable-remastered/contracts/ShellDesign.cs
++++ b/stable-remastered/contracts/ShellDesign.cs
+@@ -47,6 +47,7 @@
+         public bool PreloadIdentity {get;set;}=true;
+         public bool AdvancedOverlay {get;set;}
+         public bool RecordDiagnostics {get;set;}
++        public bool RegisterWithWindows {get;set;}=true;
+         public void Validate()
+         {
+             if(!Enum.IsDefined(typeof(BackgroundMultithreading),Multithreading))throw new ArgumentException("Invalid background multithreading preference.");
+--- a/stable-remastered/contracts/ClientUpdatePackage.cs
++++ b/stable-remastered/contracts/ClientUpdatePackage.cs
+@@ -16,7 +16,7 @@
+     }
+     public static class ClientRelease
+     {
+-        public const string Repository="hsob2nd/Boshsu",Tag="v1.2.0-rc.4";
++        public const string Repository="hsob2nd/Boshsu",Tag="v1.2.0-rc.5";
+         static readonly Regex Version=new Regex(@"^v?(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$",RegexOptions.CultureInvariant);
+         public static int Compare(string a,string b)
+         {
+--- a/stable-remastered/frontend/Bosh/osu!/Framework/Compatibility/Windows/WindowsGameForm.cs
++++ b/stable-remastered/frontend/Bosh/osu!/Framework/Compatibility/Windows/WindowsGameForm.cs
+@@ -23,6 +23,9 @@
+         public WindowsGameForm(GraphicsContextFlags flags) : base(flags)
+         {
+             SuspendLayout();
++            Text = "Boshsu";
++            Name = "Boshsu";
++            ShowInTaskbar = true;
+             CausesValidation = false;
+             ClientSize = new Size(1, 1);
+             BackColor = Color.Black;
+--- a/stable-remastered/tests/WindowsDiscoveryTests.cs
++++ b/stable-remastered/tests/WindowsDiscoveryTests.cs
+@@ -0,0 +1,83 @@
++using System;
++using System.IO;
++using System.Reflection;
++using System.Runtime.InteropServices;
++using Microsoft.Win32;
++using Newtonsoft.Json;
++using StableRemastered.Application;
++using StableRemastered.Shell;
++
++class WindowsDiscoveryTests
++{
++    static int checks;static string root;
++    [DllImport("shell32.dll")]static extern int GetCurrentProcessExplicitAppUserModelID(out IntPtr value);
++    static void Check(bool condition,string message){if(!condition)throw new Exception(message);checks++;}
++    static string Value(RegistryKey user,string key,string name=""){using(var k=user.OpenSubKey(key))return k?.GetValue(name) as string;}
++    static bool Exists(RegistryKey user,string key){using(var k=user.OpenSubKey(key))return k!=null;}
++    static void ReadLink(string path,out string target,out string id)
++    {
++        var args=new object[]{path,null,null};
++        bool exists=(bool)typeof(WindowsApplicationIdentity).GetMethod("ReadShortcut",BindingFlags.NonPublic|BindingFlags.Static).Invoke(null,args);
++        Check(exists,"Shell shortcut can be loaded after save");target=(string)args[1];id=(string)args[2];
++    }
++    [STAThread]static int Main(string[] args)
++    {
++        if(args.Length!=1)return 2;string evidence=Path.GetFullPath(args[0]);Directory.CreateDirectory(evidence);
++        root=Path.Combine(evidence,"run-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
++        string key=@"Software\Boshsu\DiscoveryTests\"+Guid.NewGuid().ToString("N");
++        try{
++            WindowsApplicationIdentity.InitializeProcess();IntPtr id;
++            Marshal.ThrowExceptionForHR(GetCurrentProcessExplicitAppUserModelID(out id));
++            try{Check(Marshal.PtrToStringUni(id)==WindowsApplicationIdentity.AppId,"Process uses the documented stable AppUserModelID");}finally{Marshal.FreeCoTaskMem(id);}
++            var historical=JsonConvert.DeserializeObject<ShellSettings>("{\"SchemaVersion\":1}");
++            Check(historical.RegisterWithWindows,"Old preferences receive the registration default");
++            historical.RegisterWithWindows=false;Check(!JsonConvert.DeserializeObject<ShellSettings>(JsonConvert.SerializeObject(historical)).RegisterWithWindows,"Opt out persists independently of performance profiles");
++            foreach(PerformanceProfile p in Enum.GetValues(typeof(PerformanceProfile))){historical.Apply(p,8);Check(!historical.RegisterWithWindows,"Performance profile cannot re-enable registration: "+p);}
++            using(var user=Registry.CurrentUser.CreateSubKey(key)){
++                user.SetValue("Sentinel","untouched");
++                string a=Path.Combine(root,"Copy A — unicode","Boshsu.exe"),b=Path.Combine(root,"Copy B","Boshsu.exe"),link=Path.Combine(root,"Start Menu","Boshsu.lnk");
++                Directory.CreateDirectory(Path.GetDirectoryName(a));Directory.CreateDirectory(Path.GetDirectoryName(b));File.WriteAllText(a,"unexecuted fixture");File.WriteAllText(b,"unexecuted fixture");
++                WindowsApplicationIdentity.Apply(user,a,link,false);
++                Check(!Exists(user,WindowsApplicationIdentity.AppPathKey)&&!File.Exists(link),"Disabled registration creates no keys or shortcut");
++                WindowsApplicationIdentity.Apply(user,a,link,true);
++                Check(Value(user,WindowsApplicationIdentity.AppPathKey)==a,"App Paths resolves the exact Unicode executable path");
++                Check(Value(user,WindowsApplicationIdentity.ApplicationKey,"FriendlyAppName")=="Boshsu","Friendly application name is registered");
++                Check(Value(user,WindowsApplicationIdentity.ApplicationKey+@"\shell\open\command")=="\""+a+"\"","Launch command correctly quotes spaces and Unicode");
++                Check(Value(user,WindowsApplicationIdentity.ApplicationKey+@"\DefaultIcon")=="\""+a+"\",0","Application icon uses its executable");
++                Check(Value(user,WindowsApplicationIdentity.AppPathKey,"Path")==null,"Registration does not change process/global PATH");
++                string target,linkId;ReadLink(link,out target,out linkId);
++                Check(target==a && linkId==WindowsApplicationIdentity.AppId,"Shortcut target and AppUserModelID agree with the process");
++                var stamp=File.GetLastWriteTimeUtc(link);var bytes=File.ReadAllBytes(link);
++                WindowsApplicationIdentity.Apply(user,a,link,true);
++                Check(File.GetLastWriteTimeUtc(link)==stamp && Convert.ToBase64String(File.ReadAllBytes(link))==Convert.ToBase64String(bytes),"Repeated startup does not rewrite the shortcut");
++                WindowsApplicationIdentity.Apply(user,b,link,true);ReadLink(link,out target,out linkId);
++                Check(Value(user,WindowsApplicationIdentity.AppPathKey)==b && target==b,"Registration follows the most recently registered copy");
++                WindowsApplicationIdentity.Apply(user,a,link,false);
++                Check(Value(user,WindowsApplicationIdentity.AppPathKey)==b && File.Exists(link),"Old copy cannot remove the newer copy's registration");
++                WindowsApplicationIdentity.Apply(user,b,link,false);
++                Check(!Exists(user,WindowsApplicationIdentity.AppPathKey)&&!Exists(user,WindowsApplicationIdentity.ApplicationKey)&&!File.Exists(link),"Opt out removes only this copy's owned entries");
++                Check((string)user.GetValue("Sentinel")=="untouched","Unrelated registry values survive cleanup");
++                using(var foreign=user.CreateSubKey(WindowsApplicationIdentity.AppPathKey))foreign.SetValue("","foreign installer");
++                bool refused=false;try{WindowsApplicationIdentity.Apply(user,a,link,true);}catch(IOException){refused=true;}
++                Check(refused && Value(user,WindowsApplicationIdentity.AppPathKey)=="foreign installer" && !File.Exists(link),"A foreign registration is preserved without partial shortcut creation");
++                WindowsApplicationIdentity.Apply(user,a,link,false);
++                Check(Value(user,WindowsApplicationIdentity.AppPathKey)=="foreign installer","Disabling cannot remove a foreign registration");
++                user.DeleteSubKeyTree(WindowsApplicationIdentity.AppPathKey);
++                Directory.CreateDirectory(Path.GetDirectoryName(link));File.WriteAllText(link,"foreign/unreadable shortcut");
++                refused=false;try{WindowsApplicationIdentity.Apply(user,a,link,true);}catch(Exception e) when(e is IOException || e is COMException){refused=true;}
++                Check(refused && File.ReadAllText(link)=="foreign/unreadable shortcut" && !Exists(user,WindowsApplicationIdentity.AppPathKey),"Unreadable shortcuts are retained and fail before registry changes");
++                File.Delete(link);WindowsApplicationIdentity.Apply(user,a,link,true);File.WriteAllText(link,"damaged owned shortcut");
++                try{WindowsApplicationIdentity.Apply(user,a,link,false);}catch(COMException){ }
++                Check(!Exists(user,WindowsApplicationIdentity.AppPathKey)&&!Exists(user,WindowsApplicationIdentity.ApplicationKey)&&File.ReadAllText(link)=="damaged owned shortcut","A damaged shortcut cannot prevent registry opt out and is retained");
++                foreach(string invalid in new[]{Path.Combine(root,"Other.exe"),Path.Combine(root,"missing","Boshsu.exe")}){
++                    refused=false;try{WindowsApplicationIdentity.Apply(user,invalid,link,true);}catch(Exception e) when(e is ArgumentException || e is FileNotFoundException){refused=true;}
++                    Check(refused,"Invalid or missing executable cannot be registered");
++                }
++            }
++            WindowsApplicationIdentity.ApplyPreference(true);Check(WindowsApplicationIdentity.Status.Contains("skipped"),"Qualification host cannot register itself as the player's client");
++            File.WriteAllText(Path.Combine(evidence,"summary.json"),JsonConvert.SerializeObject(new{Passed=true,Checks=checks,GameLaunched=false,RecorderLaunched=false,IsolatedRegistrySubtree=true,AutomaticRecorderRecognitionCertified=false},Formatting.Indented));
++            Console.WriteLine(checks+" Windows discovery checks passed");return 0;
++        }catch(Exception e){File.WriteAllText(Path.Combine(evidence,"summary.json"),JsonConvert.SerializeObject(new{Passed=false,Checks=checks,Error=e.ToString()},Formatting.Indented));Console.Error.WriteLine(e);return 1;}
++        finally{Registry.CurrentUser.DeleteSubKeyTree(key,false);}
++    }
++}
+--- a/stable-remastered/tools/package_windows_discovery.py
++++ b/stable-remastered/tools/package_windows_discovery.py
+@@ -0,0 +1,82 @@
++"""Build checked, fresh-data RC5 assets from the sealed RC4 package."""
++from pathlib import Path
++import json,shutil,hashlib,zipfile,difflib,re,importlib.util,sys,subprocess
++R=Path(__file__).resolve().parents[1];A=R.parent/'artifacts/v12/rc5-final';E=R/'evidence/windows-discovery';BASE=R.parent/'artifacts/v12/rc4-final';TAG='v1.2.0-rc.5'
++def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
++def write(p,d):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(d,indent=2)+'\n',encoding='utf-8')
++registration=json.loads((E/'isolated/summary.json').read_text());assert registration['Passed'] and registration['Checks']==29
++assert 'osu!win ->' in (E/'managed-build.log').read_text(encoding='utf-8-sig')
++assert not A.exists();A.mkdir();C=A/'client';repo=A/'repo';shutil.copytree(BASE/'repo',repo)
++with zipfile.ZipFile(BASE/'release-assets/Boshsu-1.2-clean.zip') as z:z.extractall(C)
++output=R/'frontend/Bosh/osu!win/bin/x64/Release'
++for source,name in [(output/'StableRemastered.exe','Boshsu.exe'),(output/'Boshsu.Updater.exe','Boshsu.Updater.exe'),(R/'STABLE_REMASTERED_WINDOWS_DISCOVERY_REPORT.md','STABLE_REMASTERED_WINDOWS_DISCOVERY_REPORT.md')]:shutil.copy2(source,C/name)
++for n in ('StableRemasteredGameplay.dll','UltimatePersonalModel.dll','personal-golden-qualified.pgold'):
++ assert sha(C/n)==sha(BASE/'client'/n),n
++V=A/'validation';V.mkdir()
++for p in C.glob('*.dll'):shutil.copy2(p,V/p.name)
++shutil.copy2(C/'Boshsu.exe',V/'StableRemastered.exe')
++csc='C:/BuildTools2026/MSBuild/Current/Bin/Roslyn/csc.exe';results=[]
++for name,args in [('ContractTests',[]),('V101BridgeTests',[str(E/'BRIDGE.json')]),('ClientUpdateTests',[str(V/'updater')]),('ShellContractTests',[])]:
++ exe=V/(name+'.exe')
++ subprocess.run([csc,'/nologo','/platform:x64','/langversion:7.3','/r:System.Drawing.dll','/r:System.Numerics.dll','/r:System.Windows.Forms.dll','/r:System.IO.Compression.dll','/r:System.IO.Compression.FileSystem.dll',f'/r:{V}/StableRemastered.exe',f'/r:{V}/Newtonsoft.Json.dll',f'/out:{exe}',str(R/'tests'/(name+'.cs'))],check=True)
++ p=subprocess.run([str(exe),*args],cwd=V,capture_output=True,text=True)
++ result=dict(Test=name,Passed=p.returncode==0,Output=p.stdout.strip(),Error=p.stderr.strip());results.append(result);assert p.returncode==0,result
++write(E/'REGRESSIONS.json',dict(Passed=True,Results=results))
++report=(R/'STABLE_REMASTERED_WINDOWS_DISCOVERY_REPORT.md').read_text(encoding='utf-8')
++(repo/'docs/WINDOWS_DISCOVERY.md').write_text(report,encoding='utf-8')
++p=repo/'README.md';s=p.read_text(encoding='utf-8').replace('v1.2.0-rc.4',TAG).replace('Current client: 1.2 RC4','Current client: 1.2 RC5')
++s=s.replace('RC4 fixes Windows cursor/focus handoff for avatar and PP file pickers, retaining RC3’s Song Select and Raw Input corrections. See [the correction and validation report](docs/DESKTOP_FILE_PICKER_FIX.md).','RC5 adds optional per-user Windows application registration and a stable app identity, retaining RC4’s file-picker and RC3’s input/UI corrections. This supplies Windows discovery metadata; automatic recognition by AMD/Insights remains unverified. See [Windows discovery and research](docs/WINDOWS_DISCOVERY.md).')
++p.write_text(s,encoding='utf-8')
++p=repo/'CHANGELOG.md';s=p.read_text(encoding='utf-8');s=s.replace('## 1.2 RC4','''## 1.2 RC5 — Windows application discovery (17 October 2026)
++
++- Added a stable Windows AppUserModelID before UI startup and a Boshsu window name from construction.
++- Added per-user App Paths / Applications registration and a matching Start-menu shortcut on packaged-client startup.
++- Added Options → Advanced → Windows integration with saved opt-out, status, repair and search access.
++- Preserved foreign registrations and prevented an older copy from removing a newer copy's entries. Source/test hosts skip persistent registration.
++- Passed 29 non-GUI Windows registration checks and the existing contract/bridge/shell/updater checks. Automatic AMD/Insights recognition and recording remain unverified; Windows registration is not a recorder-catalogue API.
++
++See [the implementation and research report](docs/WINDOWS_DISCOVERY.md).
++
++## 1.2 RC4''',1);p.write_text(s,encoding='utf-8')
++names=['application/WindowsApplicationIdentity.cs','application/Program.cs','application/ApplicationServices.cs','application/Shell/ShellWindowsIntegration.cs','application/Shell/ShellSettingsPage.cs','application/Shell/ShellPresentation.cs','application/Shell/ShellClientUpdates.cs','contracts/ShellDesign.cs','contracts/ClientUpdatePackage.cs','frontend/Bosh/osu!/Framework/Compatibility/Windows/WindowsGameForm.cs','tests/WindowsDiscoveryTests.cs','tools/package_windows_discovery.py']
++patch=''
++with zipfile.ZipFile(BASE/'release-assets/Boshsu-1.2-source.zip') as old:
++ for name in names:
++  key='stable-remastered/'+name;before=old.read(key).decode('utf-8-sig').splitlines(True) if key in old.namelist() else []
++  patch+=''.join(difflib.unified_diff(before,(R/name).read_text(encoding='utf-8-sig').splitlines(True),fromfile='a/'+key,tofile='b/'+key))
++P=repo/'patches/1.2-rc5';P.mkdir(parents=True);(P/'windows-discovery.patch').write_text(patch,encoding='utf-8');shutil.copy2(R/'tests/WindowsDiscoveryTests.cs',P/'WindowsDiscoveryTests.cs')
++O=A/'release-assets';O.mkdir()
++spec=importlib.util.spec_from_file_location('source_archive',R/'tools/v12_source_archive.py');module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);module.A=O;module.E=E;original=sys.argv;sys.argv=['source'];module.main();sys.argv=original
++patterns=[re.compile(rb'discord(?:app)?\.com/api/webhooks/\d+/[A-Za-z0-9_-]{20,}'),re.compile(rb'gh[pousr]_[A-Za-z0-9]{30,}'),re.compile(rb'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\r\n]+(?:[A-Za-z0-9+/=]{40,}[\r\n]+){2}')]
++with zipfile.ZipFile(O/'Boshsu-1.2-source.zip') as z:
++ findings=[i.filename for i in z.infolist() if any(p.search(z.read(i)) for p in patterns)];assert not findings,findings
++ assert not any('restore_kai' in n or 'inspect_kai_data' in n or 'find_kai_profile' in n for n in z.namelist())
++ write(E/'SOURCE_PRIVACY_SCAN.json',dict(Passed=True,Entries=len(z.infolist()),CredentialFindings=0,PrivatePlayerDataIncluded=False))
++build=json.loads((C/'BOSHSU_BUILD.json').read_text());build.update(ReleaseTag=TAG,Hotfix='Windows application identity and optional discovery registration',ExeSHA256=sha(C/'Boshsu.exe'),UpdaterSHA256=sha(C/'Boshsu.Updater.exe'),SourceSHA256=sha(O/'Boshsu-1.2-source.zip'),WindowsRegistrationChecks=29,AutomaticRecorderRecognitionQualified=False);write(C/'BOSHSU_BUILD.json',build)
++assert not (C/'StableRemasteredAccounts').exists() and not (C/'BoshShell.json').exists()
++write(C/'BOSHSU_FILES.json',{p.relative_to(C).as_posix():sha(p) for p in sorted(C.rglob('*')) if p.is_file() and p.name!='BOSHSU_FILES.json'})
++with zipfile.ZipFile(O/'Boshsu-1.2-clean.zip','w',zipfile.ZIP_DEFLATED,compresslevel=6,strict_timestamps=False) as z:
++ for p in sorted(C.rglob('*')):
++  if p.is_file():z.write(p,p.relative_to(C).as_posix())
++with zipfile.ZipFile(O/'Boshsu-1.2-clean.zip') as z:assert z.testzip() is None
++(O/'SHA256SUMS.txt').write_text(''.join(sha(O/n)+'  '+n+'\n' for n in ['Boshsu-1.2-clean.zip','Boshsu-1.2-source.zip']),encoding='utf-8')
++manifest=json.loads((repo/'release-manifest.json').read_text());manifest.update(Tag=TAG,ExeSHA256=sha(C/'Boshsu.exe'),UpdaterSHA256=sha(C/'Boshsu.Updater.exe'),WindowsRegistrationChecks=29,AutomaticRecorderRecognitionQualified=False,Files={n:dict(SHA256=sha(O/n),Bytes=(O/n).stat().st_size) for n in ['Boshsu-1.2-clean.zip','Boshsu-1.2-source.zip','SHA256SUMS.txt']});write(repo/'release-manifest.json',manifest);write(E/'PACKAGE.json',manifest)
++notes='''## Boshsu 1.2 RC5 — Windows application discovery
++
++Adds a stable Windows AppUserModelID, a Boshsu window name from construction, and optional per-user App Paths / Applications registration with a matching Start-menu shortcut. This makes application identity/path information available through documented Windows mechanisms.
++
++**This is not a certified automatic AMD/Insights game-detection fix.** Those products control their supported-game recognition. No universal client self-registration API was found in the reviewed recorder documentation. AMD's OpenGL recording limitations also remain. [Implementation, research and limits](https://github.com/hsob2nd/Boshsu/blob/main/docs/WINDOWS_DISCOVERY.md).
++
++Registration is enabled on first launch of the packaged build. Use **Options → Advanced → Windows integration** to disable, inspect or repair it; search also finds game detection/recording. It runs outside gameplay, retains foreign entries, and respects which copy owns the current registration. Gameplay, assists, PP and the native engine are unchanged. All RC4 file-picker and RC3 input/UI corrections are retained.
++
++**Update:** Options → Updates → Download → Restart & install, with beta releases enabled. Updating is the player's choice. RC1 users need the complete portable ZIP once; RC2 and later already include the updater.
++
++`Boshsu-1.2-clean.zip` is the complete fresh-data Windows x64 portable beta (.NET Framework 4.8). Extract the whole ZIP and run `Boshsu.exe`. `Boshsu-1.2-source.zip` contains the corresponding source; `SHA256SUMS.txt` provides integrity checks.
++
++Validation: 29 non-GUI Windows app-ID/registry/shortcut checks, plus 9,736 contract, 2,322 bridge, 5,890 shell and 55 updater checks passed. No game or recording app was launched for this pass. Capture hooks, automatic recognition and recording performance remain unverified.
++
++User profiles/scores/maps/settings remain independent of application updates. Clean packages exclude private player data and use bounded current-session diagnostics, Off by default. [Full history](https://github.com/hsob2nd/Boshsu/blob/main/CHANGELOG.md).
++
++GPL/MIT/OFL notices and existing supplied-asset/runtime, historical PP, online and platform limitations remain. Support is through GitHub Issues; repository writes/releases remain owner-managed.
++'''
++(A/'RELEASE_NOTES.md').write_text(notes,encoding='utf-8');print(json.dumps({k:v for k,v in manifest.items() if k in ('Tag','Files','ExeSHA256','NativeSHA256','UpdaterSHA256')},indent=2))
