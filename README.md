@@ -8,13 +8,13 @@ McOsu-derived code retains GPL-3.0, and original project modifications retain th
 
 Boshsu combines familiar song selection and skin-controlled gameplay with local profiles, custom PP systems, Map Lab, assistance settings, progression and player customization.
 
-**Current client: 1.2 RC2 · Windows x64 · release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
+**Current client: 1.2 RC3 · Windows x64 · release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
 
 ## Download
 
-- **[Portable Windows x64 beta package — Boshsu-1.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.2/Boshsu-1.2-clean.zip)**
-- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.2/Boshsu-1.2-source.zip)
-- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.2/SHA256SUMS.txt)
+- **[Portable Windows x64 beta package — Boshsu-1.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.3/Boshsu-1.2-clean.zip)**
+- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.3/Boshsu-1.2-source.zip)
+- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.3/SHA256SUMS.txt)
 - [Release notes](CHANGELOG.md)
 
 The beta is a complete portable client package, not just an executable or source download. Extract the **whole client ZIP** into a writable folder and run **Boshsu.exe**. Keep its DLLs and resource folders together. Do not run the executable from inside the ZIP. The application is built for **Windows x64 and .NET Framework 4.8**; a separate compiler or PP calculator installation is not required to play.
@@ -23,7 +23,7 @@ The clean package starts with fresh local data. It excludes the developer's prof
 
 No maps or custom skins are bundled. Choose your Songs library and skin in Options. First launch opens the Main Menu in fullscreen at the primary display's native resolution; later display changes are saved.
 
-RC2 fixes Raw Input cursor movement and F9 menu state. See [the input/menu correction and validation report](docs/RAW_INPUT_FIX.md).
+RC3 fixes legacy Song Select skin layers and unifies Raw Input across menus and gameplay. See [the correction and validation report](docs/INPUT_UI_FIX.md).
 
 **Future updates:** open **Options → Updates** to check GitHub, download a verified update and restart to install. Startup checks and beta releases can be toggled. [Update guide](docs/UPDATES.md).
 

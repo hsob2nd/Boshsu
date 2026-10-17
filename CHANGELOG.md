@@ -4,6 +4,16 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.2 RC3 — Song Select skin layers and shared Raw Input (17 October 2026)
+
+- Removed legacy normal/hover footer buttons and other replaced chrome that could peek over the modern Song Select interface at different resolutions.
+- Preserved song rows, backgrounds, gameplay skins and intentional footer skin icons.
+- Unified menu/pause/gameplay raw cursor ownership, settings, sensitivity and coordinate mapping; initialized raw input before the first map.
+- Corrected raw clicks and wheel ownership, duplicate button delivery, focus handoffs and the duplicate wheel subscription.
+- Preserved qualified assists, PP rules and user data. Added 25 skin/resolution combinations, 105 cursor/navigation checks and matching source/patches.
+
+See [the correction report](docs/INPUT_UI_FIX.md).
+
 ## 1.2 RC2 — Raw Input and F9 hotfix (17 October 2026)
 
 - Fixed native Raw Input falling back to Windows cursor movement; one gameplay cursor/sensitivity owner.
