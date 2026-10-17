@@ -1,0 +1,606 @@
+--- a/stable-remastered/engine/ApplicationEnvironment.h
++++ b/stable-remastered/engine/ApplicationEnvironment.h
+@@ -7,6 +7,9 @@
+ #include <cmath>
+ 
+ namespace stable_remastered {
++// The shell hides/shows the OS cursor. Borrow its state as well as its HWND;
++// WinEnvironment's standalone visibility flag is never updated by this host.
++extern bool applicationCursorVisible;
+ // Borrows the application's current compatibility context. It never creates,
+ // destroys, activates or swaps a window/context; the frontend owns presentation.
+ class ApplicationGraphics final : public OpenGLLegacyInterface {
+@@ -86,6 +89,7 @@
+     void setWindowSize(int,int) override {}
+     Vector2 getWindowSize() override {return Vector2(surfaceWidth,surfaceHeight);}
+     void setCursorVisible(bool) override {}
++    bool isCursorVisible() override {return applicationCursorVisible;}
+     void setCursorClip(bool,McRect) override {}
+     void setCursor(CURSORTYPE) override {}
+     Vector2 getWindowPos() override {POINT p={0,0};ClientToScreen(surfaceWindow.load(),&p);return Vector2(p.x,p.y);}
+--- a/stable-remastered/engine/ApplicationRuntime.cpp
++++ b/stable-remastered/engine/ApplicationRuntime.cpp
+@@ -5,6 +5,7 @@
+ #include "FrameMetrics.h"
+ #include "BackendApp.h"
+ #include "ResourceManager.h"
++#include "Mouse.h"
+ #include <memory>
+ #include <fstream>
+ bool g_bRunning=true; // Upstream null-platform compatibility; no loop reads it here.
+@@ -19,6 +20,7 @@
+ ConVar fps_unlimited_yield("fps_unlimited_yield",true,FCVAR_NONE);
+ ConVar win_mouse_raw_input_buffer("win_mouse_raw_input_buffer",false,FCVAR_NONE);
+ namespace stable_remastered {
++bool applicationCursorVisible=true;
+ bool developerToolsEnabled() {
+     static const bool enabled=[](){char value[8]{};return GetEnvironmentVariableA("BOSH_DEVELOPMENT_OVERLAYS",value,sizeof(value))==1 && value[0]=='1';}();
+     return enabled;
+@@ -108,7 +110,21 @@
+ }
+ int rawPointerRuntime(int x,int y,unsigned flags) {
+     if(!runtime || GetCurrentThreadId()!=owner)return -4;
++    // Do not carry menu/loading/focus-loss movement into the next gameplay
++    // owner. Button-only packets must not switch an absolute tablet to mouse.
++    if(!focused || minimized || !gameplayPointerOwned || (!(flags&1) && !x && !y))return 0;
+     runtime->onMouseRawMove(x,y,(flags&1)!=0,(flags&2)!=0);return 0;
++}
++int pointerVisibilityRuntime(bool visible) {
++    if(!runtime || GetCurrentThreadId()!=owner)return -4;
++    applicationCursorVisible=visible;return 0;
++}
++int pointerStateRuntime(double* values,unsigned count) {
++    if(!values || count!=8)return -1;
++    if(!runtime || GetCurrentThreadId()!=owner)return -4;
++    const auto mouse=runtime->getMouse();const auto pos=mouse->getPos(),os=runtime->getEnvironment()->getMousePos(),raw=mouse->getRawDelta();
++    values[0]=pos.x;values[1]=pos.y;values[2]=os.x;values[3]=os.y;values[4]=raw.x;values[5]=raw.y;
++    values[6]=applicationCursorVisible;values[7]=gameplayPointerOwned;return 0;
+ }
+ void shutdownRuntime() {
+     if(!runtime)return;
+--- a/stable-remastered/engine/ApplicationRuntime.h
++++ b/stable-remastered/engine/ApplicationRuntime.h
+@@ -8,6 +8,8 @@
+ int resizeRuntime(int width,int height);
+ int inputRuntime(unsigned kind,int value,int value2);
+ int rawPointerRuntime(int x,int y,unsigned flags);
++int pointerVisibilityRuntime(bool visible);
++int pointerStateRuntime(double* values,unsigned count);
+ int focusRuntime(bool focused,bool minimized);
+ void shutdownRuntime();
+ }
+--- a/stable-remastered/engine/BackendAbi.cpp
++++ b/stable-remastered/engine/BackendAbi.cpp
+@@ -157,6 +157,9 @@
+ extern "C" __declspec(dllexport) int sr_engine_input(unsigned kind,int value,int value2){return inputRuntime(kind,value,value2);}
+ extern "C" __declspec(dllexport) int sr_engine_focus(int focused,int minimized){return focusRuntime(focused!=0,minimized!=0);}
+ extern "C" __declspec(dllexport) int sr_engine_raw_pointer(int x,int y,unsigned flags){return rawPointerRuntime(x,y,flags);}
++extern "C" __declspec(dllexport) int sr_engine_pointer_visibility(int visible){return pointerVisibilityRuntime(visible!=0);}
++// On-demand diagnostic read; no recording, polling worker or file output.
++extern "C" __declspec(dllexport) int sr_engine_pointer_state_v1(double* values,unsigned count){return pointerStateRuntime(values,count);}
+ extern "C" __declspec(dllexport) void sr_engine_end_update(){metricsEndUpdate();}
+ extern "C" __declspec(dllexport) void sr_engine_begin_phase(unsigned phase){metricsBeginPhase(phase);}
+ extern "C" __declspec(dllexport) void sr_engine_end_phase(unsigned phase){metricsEndPhase(phase);}
+--- a/stable-remastered/application/ApplicationServices.cs
++++ b/stable-remastered/application/ApplicationServices.cs
+@@ -12,6 +12,7 @@
+     {
+         internal static IGameplayEngine Gameplay { get; private set; }
+         internal static IOnlineCompatibility Online { get; private set; }
++        internal static Updates.GithubClientUpdates ClientUpdates {get;private set;}
+         internal static AccountSession Accounts {get;private set;}
+         internal static Performance.PPProviderCatalog PPProviders {get;private set;}
+         internal static Performance.ProviderPPCalculator PP {get;private set;}
+@@ -60,7 +61,7 @@
+         }
+         internal static long BeginMessage(uint message)=>(Gameplay as McOsuGameplayEngine)?.BeginMessage(message)??0;
+         internal static void EndMessage(uint message,long begin){(Gameplay as McOsuGameplayEngine)?.EndMessage(message,begin);}
+-        internal static void RawPointer(int x,int y,uint flags){if(IsPlaying)(Gameplay as McOsuGameplayEngine)?.RawPointer(x,y,flags);}
++        internal static void RawPointer(int x,int y,uint flags){if(osu.GameBase.Mode==osu.OsuModes.Play)(Gameplay as McOsuGameplayEngine)?.RawPointer(x,y,flags);}
+         internal static void SetFocus(bool focused,bool minimized) {
+             if(!focused)ResetGameplayShortcuts();
+             Gameplay?.SetFocus(focused,minimized);
+@@ -82,6 +83,7 @@
+         }
+         internal static void Initialize() {
+             shuttingDown=false;
++            ClientUpdates=new Updates.GithubClientUpdates(AppDomain.CurrentDomain.BaseDirectory);
+             Shell.ShellPreferences.Load(osu.OsuMain.UserPath);
+             string balanceWarning=V02Configuration.Load(AppDomain.CurrentDomain.BaseDirectory);
+             pWebRequest.AllowRequest=url=>Accounts?.Mode==StableRemastered.Accounts.AccountMode.Server && !shuttingDown;
+@@ -112,8 +114,12 @@
+             try {Accounts.Save(args.Result);}catch(Exception error){NotificationManager.ShowMessage("Result could not be saved: "+error.Message);}
+         }
+         internal static void Update() {
++            ClientUpdates?.Tick();
+             FramePhase(15,true);try{Accounts?.Pump();}finally{FramePhase(15,false);}
+-            try {Gameplay?.Update();}
++            try {
++                (Gameplay as McOsuGameplayEngine)?.SetPointerVisibility(osu.GameBase.MouseVisible);
++                Gameplay?.Update();
++            }
+             catch(Exception error){if(shownError!=error.Message){shownError=error.Message;NotificationManager.ShowMessage(error.Message);}}
+             if(osu.GameBase.Mode==osu.OsuModes.Play && Gameplay!=null && retryShortcut.Poll(uiClock.Elapsed.TotalMilliseconds))Gameplay.Retry();
+             FramePhase(16,true);try{qualification?.Update();shellQualification?.Update();}finally{FramePhase(16,false);}
+@@ -128,6 +134,7 @@
+                 catch(Exception error){failures.Add(error);Logger.Log("Shutdown: "+stage+" failed: "+error,LoggingTarget.Runtime);}
+             };
+             finish("Map Lab decoding and audio worker",()=>MapLabJobs.Shutdown());
++            finish("GitHub update worker",()=>ClientUpdates?.Dispose());
+             finish("qualification evidence writer",()=>qualification?.Dispose());
+             finish("interface preparation workers",()=>Shell.ShellWork.Shutdown());
+             finish("shell assets and cues",()=>{Shell.ShellNotifications.Dispose();Shell.ShellStatsOverlay.Dispose();Shell.ShellAssets.Dispose();Shell.ShellSounds.Dispose();});
+--- a/stable-remastered/application/NativeGameplayEngine.cs
++++ b/stable-remastered/application/NativeGameplayEngine.cs
+@@ -22,6 +22,7 @@
+         private double nextDiagnostics;
+         private DisplayState display;
+         private uint detailsRevision=uint.MaxValue;
++        private bool? pointerVisibility;
+         [StructLayout(LayoutKind.Sequential)]
+         internal struct JudgmentV1 {public long Session;public double Time,Error;public int Judgment,Index;}
+         private readonly JudgmentV1[] judgmentBuffer=new JudgmentV1[128];
+@@ -132,6 +133,8 @@
+         internal long BeginMessage(uint message)=>attached?sr_engine_begin_message(message):0;
+         internal void EndMessage(uint message,long begin){if(begin!=0)sr_engine_end_message(message,begin);}
+         internal void RawPointer(int x,int y,uint flags){if(attached)Result(sr_engine_raw_pointer(x,y,flags));}
++        internal void SetPointerVisibility(bool visible){if(attached && pointerVisibility!=visible){Result(sr_engine_pointer_visibility(visible?1:0));pointerVisibility=visible;}}
++        [DllImport(DLL,CallingConvention=CallingConvention.Cdecl)] private static extern int sr_engine_pointer_visibility(int visible);
+         public void Start(){Check();Send(new {Command="Start"});}
+         public void Pause(){Check();Send(new {Command="Pause"});}
+         public void Resume(){Check();Send(new {Command="Resume"});}
+--- a/stable-remastered/frontend/Bosh/osu!/Input/Handlers/RawMouseHandler.cs
++++ b/stable-remastered/frontend/Bosh/osu!/Input/Handlers/RawMouseHandler.cs
+@@ -72,7 +72,7 @@
+                     return false;
+                 }
+             }
+-            catch { }
++            catch { return false; }
+ 
+ 
+             return true;
+@@ -87,6 +87,9 @@
+         private void MouseHandler(RawInput data)
+         {
+             RawMouse m = data.Mouse;
++            // A button/wheel-only packet carries no new coordinate system.
++            // In particular it must not reset an absolute tablet to relative.
++            if ((m.Flags & RawMouseFlags.MoveAbsolute) == 0 && m.LastX == 0 && m.LastY == 0)return;
+             float speed = (float)ConfigManager.sMouseSpeed;
+ 
+             AbsoluteMovement = (m.Flags & RawMouseFlags.MoveAbsolute) > 0;
+@@ -102,9 +105,10 @@
+                 else
+                 {
+                     // Absolute coordinates need to be shifted to the osu window's position and scaled to the desktop resolution.
+-                    position = ToScreenCoords(m) - new Vector2(GameBase.ClientBounds.X, GameBase.ClientBounds.Y);
++                    var screenPosition = ToScreenCoords(m);
++                    var origin = GameBase.Form.PointToScreen(System.Drawing.Point.Empty);
+                     var display=StableRemastered.Application.ApplicationDisplay.Current;
+-                    position.X/=(float)display.ScaleX;position.Y/=(float)display.ScaleY;
++                    position = new Vector2((float)display.ToLogicalX(screenPosition.X-origin.X),(float)display.ToLogicalY(screenPosition.Y-origin.Y));
+ 
+                     position.X = (position.X - GameBase.WindowManager.Width / 2) * speed + GameBase.WindowManager.Width / 2;
+                     position.Y = (position.Y - GameBase.WindowManager.Height / 2) * speed + GameBase.WindowManager.Height / 2;
+@@ -133,11 +137,9 @@
+         {
+             const int range = 65536;
+ 
++            var primary = System.Windows.Forms.Screen.PrimaryScreen.Bounds;
+             Rectangle screenRect = (hardware.Flags & RawMouseFlags.VirtualDesktop) > 0 ?
+-                VirtualScreenRect :
+-                new Rectangle(
+-                    GameBase.InitialDesktopLocation.X, GameBase.InitialDesktopLocation.Y,
+-                    GameBase.InitialDesktopResolution.Width, GameBase.InitialDesktopResolution.Height);
++                VirtualScreenRect : new Rectangle(primary.X,primary.Y,primary.Width,primary.Height);
+ 
+             return new Vector2(
+                 (float)hardware.LastX / range * screenRect.Width + screenRect.X,
+@@ -256,7 +258,7 @@
+         {
+             get
+             {
+-                return ConfigManager.sRawInput && GameBase.Instance.IsActive && !MouseManager.showWindow &&
++                return !StableRemastered.Application.ApplicationServices.IsPlaying && ConfigManager.sRawInput && GameBase.Instance.IsActive && !MouseManager.showWindow &&
+                     (AbsoluteMovement || (!MouseManager.showMouse && MouseManager.PosInWindow(MouseManager.MousePoint, 1)));
+             }
+         }
+--- a/stable-remastered/frontend/Bosh/osu!/Input/Handlers/MouseHandler.cs
++++ b/stable-remastered/frontend/Bosh/osu!/Input/Handlers/MouseHandler.cs
+@@ -32,6 +32,16 @@
+         {
+             Point nativeMousePosition = MouseManager.GetNativePosition();
+ 
++            // During native gameplay the shell observes the OS pointer for its
++            // UI only. Sensitivity/warping belong to the gameplay mouse owner.
++            if (StableRemastered.Application.ApplicationServices.IsPlaying)
++            {
++                position = new Vector2(nativeMousePosition.X, nativeMousePosition.Y);
++                previousNativeMousePosition = nativeMousePosition;
++                wasActive = false;
++                return;
++            }
++
+             if (!isActive)
+             {
+                 wasActive = false;
+--- a/stable-remastered/frontend/Bosh/osu!/Input/Handlers/WndProcInputHandler.cs
++++ b/stable-remastered/frontend/Bosh/osu!/Input/Handlers/WndProcInputHandler.cs
+@@ -127,7 +127,9 @@
+                         int dwSize = sizeof(RawInput);
+                         RawInput data;
+ 
+-                        Native.GetRawInputData(m.LParam, RawInputCommand.Input, out data, ref dwSize, sizeof(RawInputHeader));
++                        int bytes = Native.GetRawInputData(m.LParam, RawInputCommand.Input, out data, ref dwSize, sizeof(RawInputHeader));
++                        if(bytes < sizeof(RawInputHeader) || data.Header.Size > bytes)break;
++                        if(data.Header.Type == RawInputType.Mouse && bytes < sizeof(RawInputHeader)+sizeof(RawMouse))break;
+ 
+                         switch (data.Header.Type)
+                         {
+--- a/stable-remastered/frontend/Bosh/osu!/Online/Social/ChatEngine.cs
++++ b/stable-remastered/frontend/Bosh/osu!/Online/Social/ChatEngine.cs
+@@ -1476,6 +1476,11 @@
+ 
+         private static bool checkLogin()
+         {
++            // F8/F9 belong to the legacy Bancho overlay. This host uses its
++            // account providers instead; opening stable's login-only Options
++            // panel here leaves the modern menu in an unsupported modal state.
++            if (!StableRemastered.Online.OnlineCapabilities.LegacySessionAllowed)
++                return false;
+ #if ARCADE
+             if (!BanchoClient.Connected)
+                 return false;
+--- a/stable-remastered/CMakeLists.txt
++++ b/stable-remastered/CMakeLists.txt
+@@ -89,6 +89,8 @@
+ # The pinned upstream file is preserved; downstream gameplay math stays logical.
+ list(REMOVE_ITEM ENGINE_FILES "${MCENGINE_ROOT}/src/Engine/Input/Mouse.cpp")
+ file(READ "${MCENGINE_ROOT}/src/Engine/Input/Mouse.cpp" MOUSE_SOURCE)
++string(REPLACE "McRect screen = m_bVirtualDesktop ? env->getVirtualScreenRect() : desktopRect;" "McRect screen = m_bVirtualDesktop ? env->getVirtualScreenRect() : McRect(0,0,GetSystemMetrics(SM_CXSCREEN),GetSystemMetrics(SM_CYSCREEN));" MOUSE_SOURCE "${MOUSE_SOURCE}")
++string(REPLACE "if (xDelta != 0 || yDelta != 0)" "if (absolute || xDelta != 0 || yDelta != 0)" MOUSE_SOURCE "${MOUSE_SOURCE}")
+ string(REPLACE "nextPos = posInScreenCoords - env->getWindowPos();" "nextPos = posInScreenCoords - env->getWindowPos();\n                    nextPos.x = (nextPos.x-stable_remastered::viewportX)/stable_remastered::presentationScaleX();\n                    nextPos.y = (nextPos.y-stable_remastered::viewportY)/stable_remastered::presentationScaleY();" MOUSE_SOURCE "${MOUSE_SOURCE}")
+ string(REPLACE "Vector2(xDelta, yDelta) * mouse_sensitivity.getFloat()" "Vector2(xDelta/stable_remastered::presentationScaleX(), yDelta/stable_remastered::presentationScaleY()) * mouse_sensitivity.getFloat()" MOUSE_SOURCE "${MOUSE_SOURCE}")
+ file(WRITE "${CMAKE_BINARY_DIR}/ApplicationMouse.cpp" "#include \"BackendBridge.h\"\n${MOUSE_SOURCE}")
+--- a/stable-remastered/application/Program.cs
++++ b/stable-remastered/application/Program.cs
+@@ -53,6 +53,7 @@
+             {
+                 BanchoClient.Exit();
+                 ApplicationServices.Shutdown();
++                ApplicationServices.ClientUpdates?.LaunchInstaller();
+                 if(DiagnosticSession.Ready)try{File.WriteAllText(Path.Combine(Logger.LogDirectory,"application-exit.json"),"{\"MainReturned\":true,\"ShutdownCompleted\":true}");}catch { }
+             }
+             }
+--- a/stable-remastered/application/ClientIntegration.projitems
++++ b/stable-remastered/application/ClientIntegration.projitems
+@@ -2,6 +2,7 @@
+   <PropertyGroup><DefineConstants>$(DefineConstants);STABLE_REMASTERED</DefineConstants></PropertyGroup>
+   <ItemGroup>
+     <Reference Include="System.IO.Compression" />
++    <Reference Include="System.IO.Compression.FileSystem" />
+     <EmbeddedResource Include="$(MSBuildThisFileDirectory)Fonts\*.ttf"><LogicalName>Bosh.Fonts.%(Filename)%(Extension)</LogicalName></EmbeddedResource>
+     <Content Include="$(MSBuildThisFileDirectory)Fonts\*.ttf"><Link>fonts\%(Filename)%(Extension)</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+     <Content Include="$(MSBuildThisFileDirectory)Fonts\*-OFL.txt"><Link>licenses\%(Filename)%(Extension)</Link><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></Content>
+@@ -12,4 +13,7 @@
+     <Compile Include="$(MSBuildThisFileDirectory)..\personal\MaxAssist.PersonalGolden.Bootstrap\MapRotationBootstrap.cs" />
+     <Compile Include="$(MSBuildThisFileDirectory)..\personal\Bosh.Compatibility\*.cs" />
+   </ItemGroup>
++  <Target Name="BuildBoshsuUpdater" AfterTargets="Build">
++    <Csc Sources="$(MSBuildThisFileDirectory)..\contracts\ClientUpdatePackage.cs;$(MSBuildThisFileDirectory)..\tools\ClientUpdater\Program.cs" OutputAssembly="$(TargetDir)Boshsu.Updater.exe" TargetType="winexe" Platform="x64" LangVersion="7.3" References="System.dll;System.Core.dll;System.Windows.Forms.dll;System.IO.Compression.dll;System.IO.Compression.FileSystem.dll;$(TargetDir)Newtonsoft.Json.dll" />
++  </Target>
+ </Project>
+--- a/stable-remastered/application/Shell/ShellSettingsPage.cs
++++ b/stable-remastered/application/Shell/ShellSettingsPage.cs
+@@ -12,7 +12,7 @@
+ {
+     internal static partial class ShellPresentation
+     {
+-        internal static readonly string[] SettingCategories={"Gameplay","Assists","Visuals","Audio","Performance","Map Lab","Profile","Cosmetics","Online / Worlds","Notifications","Advanced"};
++        internal static readonly string[] SettingCategories={"Gameplay","Assists","Visuals","Audio","Performance","Map Lab","Profile","Cosmetics","Online / Worlds","Notifications","Advanced","Updates"};
+         // Research sliders reserve a wide legacy label such as ": 100.00%".
+         // The modern row already renders the actual live value separately.
+         static string SliderTitle(string title)=>title!=null && title.StartsWith("Followpoint Timing",StringComparison.OrdinalIgnoreCase)?"Followpoint Timing":title!=null && title.StartsWith("Map Flip",StringComparison.OrdinalIgnoreCase)?"Map Flip":System.Text.RegularExpressions.Regex.Replace(title??"Setting",@":\s*[-+]?\d+(?:\.\d+)?\s*(?:%|x|ms|°)?\s*$","");
+@@ -36,6 +36,7 @@
+         }
+         internal static void ShowSettings(string category="Gameplay",string search="",int page=0)
+         {
++            if(category=="Updates" || new[]{"update","updates","github","download update"}.Contains((search??"").Trim().ToLowerInvariant())){ShowClientUpdates();return;}
+             if(category=="Notifications"){ShowNotifications();return;}
+             if(new[]{"notifications","notification","popups","pp notifications","achievement notifications"}.Contains((search??"").Trim().ToLowerInvariant())){ShowNotifications();return;}
+             if(category=="Assists" && string.IsNullOrWhiteSpace(search)){ShowAssists();return;}
+--- a/stable-remastered/contracts/ClientUpdatePackage.cs
++++ b/stable-remastered/contracts/ClientUpdatePackage.cs
+@@ -0,0 +1,115 @@
++using System;
++using System.IO;
++using System.IO.Compression;
++using System.Linq;
++using System.Collections.Generic;
++using System.Security.Cryptography;
++using System.Text.RegularExpressions;
++using Newtonsoft.Json;
++using Newtonsoft.Json.Linq;
++namespace StableRemastered.Updates
++{
++    public sealed class UpdateJob
++    {
++        public string Root,Archive,SHA256,Tag;
++        public int ParentId;
++    }
++    public static class ClientRelease
++    {
++        public const string Repository="hsob2nd/Boshsu",Tag="v1.2.0-rc.2";
++        static readonly Regex Version=new Regex(@"^v?(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$",RegexOptions.CultureInvariant);
++        public static int Compare(string a,string b)
++        {
++            var x=Version.Match(a??"");var y=Version.Match(b??"");if(!x.Success||!y.Success)throw new InvalidDataException("Unsupported release version.");
++            for(int n=1;n<=3;n++){int c=int.Parse(x.Groups[n].Value).CompareTo(int.Parse(y.Groups[n].Value));if(c!=0)return c;}
++            Func<Match,int> rank=m=>m.Groups[4].Value=="alpha"?0:m.Groups[4].Value=="beta"?1:m.Groups[4].Value=="rc"?2:3;
++            int r=rank(x).CompareTo(rank(y));if(r!=0)return r;
++            return rank(x)==3?0:int.Parse(x.Groups[5].Value).CompareTo(int.Parse(y.Groups[5].Value));
++        }
++        public static bool AllowedDownload(string url,string tag,string filename)
++        {
++            Uri u;return Version.IsMatch(tag??"") && Regex.IsMatch(filename??"",@"^Boshsu-\d+(?:\.\d+){1,3}-clean\.zip$") &&
++                Uri.TryCreate(url,UriKind.Absolute,out u)&&u.Scheme=="https"&&u.Host=="github.com"&&u.IsDefaultPort&&string.IsNullOrEmpty(u.UserInfo)&&string.IsNullOrEmpty(u.Query)&&string.IsNullOrEmpty(u.Fragment)&&
++                u.AbsolutePath=="/"+Repository+"/releases/download/"+tag+"/"+filename;
++        }
++    }
++    public static class ClientUpdatePackage
++    {
++        public static string Hash(string path){using(var h=SHA256.Create())using(var f=File.OpenRead(path))return BitConverter.ToString(h.ComputeHash(f)).Replace("-","").ToLowerInvariant();}
++        static readonly string[] ResourceRoots={"materials","shaders","fonts","licenses","models","trainer-tools","empty-engine-data"};
++        public static bool AllowedEntry(string name)
++        {
++            if(string.IsNullOrEmpty(name)||name.Length>240||name.Contains('\\')||name.Contains(':')||name.StartsWith("/")||name.Split('/').Any(p=>p==".."||p=="."||p.EndsWith(" ")||p.EndsWith(".")))return false;
++            var parts=name.TrimEnd('/').Split('/');if(parts.Any(p=>string.IsNullOrEmpty(p)||Regex.IsMatch(p,@"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)",RegexOptions.IgnoreCase)))return false;
++            if(name.EndsWith("/"))return ResourceRoots.Contains(parts[0],StringComparer.OrdinalIgnoreCase)||parts[0].Equals("PPProviders",StringComparison.OrdinalIgnoreCase)&&parts.Length==1;
++            if(parts.Length>1)return ResourceRoots.Contains(parts[0],StringComparer.OrdinalIgnoreCase)||parts[0].Equals("PPProviders",StringComparison.OrdinalIgnoreCase)&&parts.Length==2&&new[]{"akatsuki-b96019f.zip","ccv3-pp-main.zip"}.Contains(parts[1],StringComparer.OrdinalIgnoreCase);
++            string file=parts[0],ext=Path.GetExtension(file).ToLowerInvariant();
++            return ext==".exe"||ext==".dll"||ext==".md"||new[]{"README.txt","RELEASE_STATUS.txt","MaxAssistTelemetry.paused","BOSHSU_BUILD.json","BOSHSU_FILES.json","personal-golden-qualified.pgold"}.Contains(file,StringComparer.OrdinalIgnoreCase);
++        }
++        static void PlainDirectory(string root,string path)
++        {
++            string boundary=Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar)+Path.DirectorySeparatorChar;
++            path=Path.GetFullPath(path);if(!path.StartsWith(boundary,StringComparison.OrdinalIgnoreCase))throw new InvalidDataException("Update path escaped its installation.");
++            for(var d=new DirectoryInfo(Path.GetDirectoryName(path));d!=null&&d.FullName.Length>=boundary.Length-1;d=d.Parent)
++                if(d.Exists&&(d.Attributes&FileAttributes.ReparsePoint)!=0)throw new InvalidDataException("Update destination contains a redirected directory.");
++            if(File.Exists(path)&&(File.GetAttributes(path)&FileAttributes.ReparsePoint)!=0)throw new InvalidDataException("Update destination is redirected.");
++        }
++        public static Dictionary<string,string> Verify(string archive,string expectedHash,string tag)
++        {
++            if(!Regex.IsMatch(expectedHash??"",@"^[0-9a-f]{64}$")||Hash(archive)!=expectedHash)throw new InvalidDataException("Update checksum did not match GitHub.");
++            ClientRelease.Compare(tag,ClientRelease.Tag);
++            using(var z=ZipFile.OpenRead(archive)){
++                if(z.Entries.Count>12000||z.Entries.Sum(e=>e.Length)>2L*1024*1024*1024)throw new InvalidDataException("Update package exceeds its limits.");
++                var names=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
++                foreach(var entry in z.Entries){if(!names.Add(entry.FullName)||!AllowedEntry(entry.FullName)||entry.Length>512L*1024*1024||((entry.ExternalAttributes>>16)&0xF000)==0xA000||(entry.ExternalAttributes&(int)FileAttributes.ReparsePoint)!=0)throw new InvalidDataException("Unsafe or unexpected update file: "+entry.FullName);}
++                var manifest=z.GetEntry("BOSHSU_FILES.json");var build=z.GetEntry("BOSHSU_BUILD.json");
++                if(manifest==null||build==null||manifest.Length>4*1024*1024||build.Length>65536||z.GetEntry("Boshsu.exe")==null||z.GetEntry("StableRemasteredGameplay.dll")==null||z.GetEntry("Boshsu.Updater.exe")==null)throw new InvalidDataException("Incomplete update package.");
++                Dictionary<string,string> hashes;JObject metadata;
++                using(var r=new StreamReader(manifest.Open()))hashes=JsonConvert.DeserializeObject<Dictionary<string,string>>(r.ReadToEnd());
++                using(var r=new StreamReader(build.Open()))metadata=JObject.Parse(r.ReadToEnd());
++                if((string)metadata["ReleaseTag"]!=tag||metadata["Product"]?.ToString()!="Boshsu")throw new InvalidDataException("Update metadata belongs to another release.");
++                foreach(var entry in z.Entries.Where(e=>!e.FullName.EndsWith("/")&&e.FullName!="BOSHSU_FILES.json")){
++                    string expected;if(hashes==null||!hashes.TryGetValue(entry.FullName,out expected)||!Regex.IsMatch(expected,@"^[0-9a-f]{64}$"))throw new InvalidDataException("Update file is missing from its manifest.");
++                    using(var h=SHA256.Create())using(var f=entry.Open())if(BitConverter.ToString(h.ComputeHash(f)).Replace("-","").ToLowerInvariant()!=expected)throw new InvalidDataException("Update file checksum failed: "+entry.FullName);
++                }
++                if(hashes.Count!=z.Entries.Count(e=>!e.FullName.EndsWith("/"))-1)throw new InvalidDataException("Update manifest contains unexpected files.");
++                return hashes;
++            }
++        }
++        public static void Install(UpdateJob job,Action<int> afterFile=null)
++        {
++            string root=Path.GetFullPath(job.Root);if(Path.GetPathRoot(root).TrimEnd('\\')==root.TrimEnd('\\')||!File.Exists(Path.Combine(root,"Boshsu.exe"))||!File.Exists(Path.Combine(root,"BOSHSU_BUILD.json")))throw new InvalidDataException("Select an existing Boshsu installation.");
++            Verify(job.Archive,job.SHA256,job.Tag);
++            using(var z=ZipFile.OpenRead(job.Archive)){
++                long expanded=z.Entries.Sum(e=>e.Length),old=0;
++                foreach(var entry in z.Entries.Where(e=>!e.FullName.EndsWith("/"))){string target=Path.Combine(root,entry.FullName.Replace('/',Path.DirectorySeparatorChar));PlainDirectory(root,target);if(File.Exists(target))old+=new FileInfo(target).Length;}
++                var drive=new DriveInfo(Path.GetPathRoot(root));if(drive.AvailableFreeSpace<expanded*2+old+64L*1024*1024)throw new IOException("Not enough free space to stage and back up this update.");
++            }
++            string id=Guid.NewGuid().ToString("N"),stage=Path.Combine(root,"Updates","stage-"+id),backup=Path.Combine(root,"Updates","rollback-"+id);
++            PlainDirectory(root,Path.Combine(stage,"marker"));PlainDirectory(root,Path.Combine(backup,"marker"));Directory.CreateDirectory(stage);Directory.CreateDirectory(backup);
++            var replaced=new List<string>();var originals=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
++            try{
++                using(var z=ZipFile.OpenRead(job.Archive))foreach(var entry in z.Entries.Where(e=>!e.FullName.EndsWith("/"))){string path=Path.Combine(stage,entry.FullName.Replace('/',Path.DirectorySeparatorChar));PlainDirectory(stage,path);Directory.CreateDirectory(Path.GetDirectoryName(path));entry.ExtractToFile(path);}
++                foreach(var file in Directory.GetFiles(stage,"*",SearchOption.AllDirectories)){
++                    string name=file.Substring(stage.Length+1),target=Path.Combine(root,name),old=Path.Combine(backup,name);PlainDirectory(root,target);
++                    if(File.Exists(target)){Directory.CreateDirectory(Path.GetDirectoryName(old));File.Copy(target,old);originals.Add(name);}
++                    Directory.CreateDirectory(Path.GetDirectoryName(target));replaced.Add(name);File.Copy(file,target,true);afterFile?.Invoke(replaced.Count);
++                }
++                File.WriteAllText(Path.Combine(backup,"rollback-manifest.json"),JsonConvert.SerializeObject(originals));
++                // Retain exactly the previous application files for recovery.
++                foreach(var old in Directory.GetDirectories(Path.Combine(root,"Updates"),"rollback-*"))if(old!=backup&&File.Exists(Path.Combine(old,"rollback-manifest.json")))RemoveOwnedDirectory(root,old);
++            }catch{
++                var failures=new List<Exception>();foreach(var name in replaced.AsEnumerable().Reverse())try{string target=Path.Combine(root,name);PlainDirectory(root,target);if(originals.Contains(name))File.Copy(Path.Combine(backup,name),target,true);else if(File.Exists(target))File.Delete(target);}catch(Exception e){failures.Add(e);}
++                if(failures.Count!=0)throw new AggregateException("Update failed and some files could not be restored. Use the saved rollback directory.",failures);
++                RemoveOwnedDirectory(root,backup);
++                throw;
++            }finally{try{RemoveOwnedDirectory(root,stage);}catch(Exception e) when(e is IOException||e is UnauthorizedAccessException){try{File.WriteAllText(Path.Combine(root,"Updates","last-cleanup.txt"),"A staging directory could not be removed: "+stage);}catch{}}}
++        }
++        static void RemoveOwnedDirectory(string root,string path)
++        {
++            PlainDirectory(root,Path.Combine(path,"marker"));
++            foreach(var dir in Directory.GetDirectories(path))RemoveOwnedDirectory(root,dir);
++            foreach(var file in Directory.GetFiles(path)){PlainDirectory(root,file);File.Delete(file);}Directory.Delete(path);
++        }
++    }
++}
+--- a/stable-remastered/application/Updates/GithubClientUpdates.cs
++++ b/stable-remastered/application/Updates/GithubClientUpdates.cs
+@@ -0,0 +1,114 @@
++using System;
++using System.IO;
++using System.Linq;
++using System.Threading;
++using System.Threading.Tasks;
++using System.Net.Http;
++using System.Diagnostics;
++using System.Text.RegularExpressions;
++using Newtonsoft.Json;
++using Newtonsoft.Json.Linq;
++using StableRemastered.Updates;
++namespace StableRemastered.Application.Updates
++{
++    internal sealed class UpdatePreferences {public bool CheckOnStartup=true,IncludeBetas=true;}
++    internal sealed class ClientUpdateStatus
++    {
++        public string State="Idle",Message="Check GitHub for a newer client.",Tag,Url,Name,Hash;
++        public long Bytes,Received;
++        public double Progress=>Bytes>0?Math.Min(1,(double)Received/Bytes):0;
++        public bool Busy=>State=="Checking"||State=="Downloading";
++    }
++    internal sealed class GithubClientUpdates : IDisposable
++    {
++        readonly string root,folder;readonly HttpClient http;readonly object gate=new object();
++        CancellationTokenSource cancel;Task worker;volatile ClientUpdateStatus status=new ClientUpdateStatus();
++        bool closed,startupChecked;string downloaded;UpdateJob install;readonly Stopwatch startup=Stopwatch.StartNew();
++        internal UpdatePreferences Preferences{get;private set;}=new UpdatePreferences();
++        internal ClientUpdateStatus Status=>status;
++        internal GithubClientUpdates(string root)
++        {
++            this.root=Path.GetFullPath(root);folder=Path.Combine(this.root,"Updates");
++            try{var p=Path.Combine(folder,"preferences.json");if(File.Exists(p))Preferences=JsonConvert.DeserializeObject<UpdatePreferences>(File.ReadAllText(p))??new UpdatePreferences();}catch{}
++            http=new HttpClient{Timeout=TimeSpan.FromMinutes(10)};http.DefaultRequestHeaders.UserAgent.ParseAdd("Boshsu/1.2");http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
++        }
++        internal void SavePreferences(bool startupCheck,bool betas)
++        {
++            var p=new UpdatePreferences{CheckOnStartup=startupCheck,IncludeBetas=betas};Directory.CreateDirectory(folder);File.WriteAllText(Path.Combine(folder,"preferences.json"),JsonConvert.SerializeObject(p));Preferences=p;
++        }
++        internal void Tick()
++        {
++            if(startupChecked||!Preferences.CheckOnStartup||startup.Elapsed.TotalSeconds<8||osu.GameBase.Mode!=osu.OsuModes.Menu)return;
++            startupChecked=true;Check();
++        }
++        internal void Check()=>Run(async token=>{
++            status=new ClientUpdateStatus{State="Checking",Message="Checking GitHub releases…"};
++            using(var timeout=CancellationTokenSource.CreateLinkedTokenSource(token)){
++                timeout.CancelAfter(TimeSpan.FromSeconds(25));using(var r=await http.GetAsync("https://api.github.com/repos/"+ClientRelease.Repository+"/releases?per_page=20",timeout.Token).ConfigureAwait(false)){
++                    r.EnsureSuccessStatusCode();if(r.Content.Headers.ContentLength>2*1024*1024)throw new InvalidDataException("Release list is too large.");
++                    string text=await r.Content.ReadAsStringAsync().ConfigureAwait(false);if(text.Length>2*1024*1024)throw new InvalidDataException("Release list is too large.");
++                    status=SelectRelease(JArray.Parse(text),Preferences.IncludeBetas);
++                }
++            }
++        });
++        internal static ClientUpdateStatus SelectRelease(JArray releases,bool betas)
++        {
++            ClientUpdateStatus best=null;
++            foreach(JObject r in releases.OfType<JObject>()){
++                string tag=(string)r["tag_name"];if((bool?)r["draft"]==true||!betas&&(bool?)r["prerelease"]==true)continue;
++                try{if(ClientRelease.Compare(tag,ClientRelease.Tag)<=0||best!=null&&ClientRelease.Compare(tag,best.Tag)<=0)continue;}catch{continue;}
++                var a=(r["assets"] as JArray)?.OfType<JObject>().FirstOrDefault(x=>ClientRelease.AllowedDownload((string)x["browser_download_url"],tag,(string)x["name"]));
++                string digest=(string)a?["digest"];long size=(long?)a?["size"]??0;
++                if(a==null||size<1||size>1024L*1024*1024||!Regex.IsMatch(digest??"",@"^sha256:[0-9a-f]{64}$"))continue;
++                best=new ClientUpdateStatus{State="Available",Message="A newer client is available.",Tag=tag,Url=(string)a["browser_download_url"],Name=(string)a["name"],Hash=digest.Substring(7),Bytes=size};
++            }
++            return best??new ClientUpdateStatus{State="Current",Message=betas?"You are on the newest available client in this channel.":"No newer stable release. Enable beta updates for release candidates."};
++        }
++        internal void Download()
++        {
++            var release=status;if(release.State!="Available")return;
++            Run(async token=>{
++                Directory.CreateDirectory(folder);string path=Path.Combine(folder,"Boshsu-update-"+release.Tag+".zip"),part=path+".part";
++                status=Copy(release,"Downloading","Downloading verified release…",0);
++                try{
++                    using(var r=await http.GetAsync(release.Url,HttpCompletionOption.ResponseHeadersRead,token).ConfigureAwait(false)){
++                        r.EnsureSuccessStatusCode();var uri=r.RequestMessage.RequestUri;if(uri.Scheme!="https"||!(uri.Host=="github.com"||uri.Host.EndsWith(".githubusercontent.com",StringComparison.OrdinalIgnoreCase)))throw new InvalidDataException("Unexpected update download destination.");
++                        if(r.Content.Headers.ContentLength.HasValue&&r.Content.Headers.ContentLength.Value!=release.Bytes)throw new InvalidDataException("Update size differs from GitHub.");
++                        using(var stream=await r.Content.ReadAsStreamAsync().ConfigureAwait(false))using(var file=new FileStream(part,FileMode.Create,FileAccess.Write,FileShare.None,65536,true)){
++                            var buffer=new byte[65536];long total=0;int read;var progress=Stopwatch.StartNew();
++                            while((read=await stream.ReadAsync(buffer,0,buffer.Length,token).ConfigureAwait(false))>0){total+=read;if(total>release.Bytes)throw new InvalidDataException("Update download exceeds its declared size.");await file.WriteAsync(buffer,0,read,token).ConfigureAwait(false);if(progress.ElapsedMilliseconds>=200){status=Copy(release,"Downloading","Downloading verified release…",total);progress.Restart();}}
++                            if(total!=release.Bytes)throw new InvalidDataException("Update download was incomplete.");
++                        }
++                    }
++                    token.ThrowIfCancellationRequested();status=Copy(release,"Downloading","Checking package integrity…",release.Bytes);
++                    await Task.Run(()=>ClientUpdatePackage.Verify(part,release.Hash,release.Tag),token).ConfigureAwait(false);token.ThrowIfCancellationRequested();
++                    if(File.Exists(path))File.Delete(path);File.Move(part,path);downloaded=path;
++                    foreach(var old in Directory.GetFiles(folder,"Boshsu-update-*.zip"))if(old!=path)File.Delete(old);
++                    status=Copy(release,"Downloaded","Verified and ready. Restart to install; your personal data stays in place.",release.Bytes);
++                }finally{if(File.Exists(part))try{File.Delete(part);}catch{}}
++            });
++        }
++        static ClientUpdateStatus Copy(ClientUpdateStatus s,string state,string message,long received)=>new ClientUpdateStatus{State=state,Message=message,Tag=s.Tag,Url=s.Url,Name=s.Name,Hash=s.Hash,Bytes=s.Bytes,Received=received};
++        void Run(Func<CancellationToken,Task> work)
++        {
++            lock(gate){if(closed||worker!=null&&!worker.IsCompleted)return;cancel?.Dispose();cancel=new CancellationTokenSource(TimeSpan.FromMinutes(10));var token=cancel.Token;
++                worker=Task.Run(async()=>{try{await work(token).ConfigureAwait(false);}catch(OperationCanceledException){if(!closed)status=new ClientUpdateStatus{State="Idle",Message="Update operation cancelled. Current client is unchanged."};}catch(Exception e){if(!closed)status=new ClientUpdateStatus{State="Error",Message="Update unavailable: "+e.Message+" Your current client is unchanged."};}});
++            }
++        }
++        internal void Cancel(){lock(gate)cancel?.Cancel();}
++        internal void PrepareRestart()
++        {
++            var s=status;if(s.State!="Downloaded"||!File.Exists(downloaded))throw new InvalidOperationException("Download and verify an update first.");
++            string helper=Path.Combine(folder,"installer");Directory.CreateDirectory(helper);
++            foreach(string name in new[]{"Boshsu.Updater.exe","Newtonsoft.Json.dll"})File.Copy(Path.Combine(root,name),Path.Combine(helper,name),true);
++            install=new UpdateJob{Root=root,Archive=downloaded,SHA256=s.Hash,Tag=s.Tag,ParentId=Process.GetCurrentProcess().Id};
++            File.WriteAllText(Path.Combine(helper,"job.json"),JsonConvert.SerializeObject(install));status=Copy(s,"Installing","Closing cleanly before installation…",s.Bytes);
++        }
++        internal void LaunchInstaller()
++        {
++            if(install==null)return;string helper=Path.Combine(folder,"installer");
++            Process.Start(new ProcessStartInfo(Path.Combine(helper,"Boshsu.Updater.exe"),"\""+Path.Combine(helper,"job.json")+"\""){UseShellExecute=false,CreateNoWindow=true,WindowStyle=ProcessWindowStyle.Hidden,WorkingDirectory=helper});install=null;
++        }
++        public void Dispose(){lock(gate){closed=true;cancel?.Cancel();}http.Dispose();try{worker?.Wait(5000);}catch{}cancel?.Dispose();}
++    }
++}
+--- a/stable-remastered/application/Shell/ShellClientUpdates.cs
++++ b/stable-remastered/application/Shell/ShellClientUpdates.cs
+@@ -0,0 +1,30 @@
++using System;
++using StableRemastered.Updates;
++using StableRemastered.Shell;
++namespace StableRemastered.Application.Shell
++{
++    internal static partial class ShellPresentation
++    {
++        internal static void ShowClientUpdates()
++        {
++            var updater=ApplicationServices.ClientUpdates;
++            Page("Updates","GitHub releases · verified portable updates · your data stays yours",d=>{
++                var c=d.Canvas;var r=d.Content;var s=updater.Status;
++                c.Text("BOSHSU 1.2 RC2",22,r.X,r.Y,r.Width,BoshTheme.Text,true);
++                c.Text("Current: "+ClientRelease.Tag+"  ·  GitHub / "+ClientRelease.Repository,12,r.X,r.Y+36,r.Width,BoshTheme.Muted);
++                var message=c.Text(s.Message,16,r.X,r.Y+78,r.Width,s.State=="Error"?BoshTheme.Negative:BoshTheme.Accent,false,.95f,58);
++                c.Text(s.Tag==null?"":("New release: "+s.Tag),18,r.X,r.Y+140,r.Width,BoshTheme.Text,true);
++                var progress=c.Text(s.State=="Downloading"?(s.Progress*100).ToString("0")+"%  ·  "+(s.Received/1048576d).ToString("0.0")+" / "+(s.Bytes/1048576d).ToString("0.0")+" MB":"",13,r.X,r.Y+175,r.Width,BoshTheme.Muted);
++                c.Button("Check for updates",new ShellRect(r.X,r.Y+214,190,38),()=>updater.Check(),false,!s.Busy&&s.State!="Installing");
++                if(s.State=="Available")c.Button("Download update",new ShellRect(r.X+204,r.Y+214,190,38),()=>updater.Download());
++                if(s.State=="Downloaded")c.Button("Restart & install",new ShellRect(r.X+204,r.Y+214,190,38),()=>Safe(()=>{updater.PrepareRestart();d.Close();osu.GameBase.ChangeMode(osu.OsuModes.Exit);}));
++                if(s.Busy)c.Button("Cancel",new ShellRect(r.X+204,r.Y+214,130,38),()=>updater.Cancel());
++                double y=r.Y+274;
++                c.Button("Check at startup  ·  "+(updater.Preferences.CheckOnStartup?"On":"Off"),new ShellRect(r.X,y,r.Width*.5-6,34),()=>Safe(()=>{updater.SavePreferences(!updater.Preferences.CheckOnStartup,updater.Preferences.IncludeBetas);d.Reflow=true;}));
++                c.Button("Beta releases  ·  "+(updater.Preferences.IncludeBetas?"On":"Off"),new ShellRect(r.X+r.Width*.5,y,r.Width*.5,34),()=>Safe(()=>{updater.SavePreferences(updater.Preferences.CheckOnStartup,!updater.Preferences.IncludeBetas);updater.Check();d.Reflow=true;}));
++                c.Text("Downloads come from this project's GitHub Releases. Install after closing gameplay. Profiles, scores, maps, skins, settings and custom PP providers are preserved. One previous application version is kept for recovery.",12,r.X,y+52,r.Width,BoshTheme.Muted,false,.95f,62);
++                string state=s.State;double next=0;var clock=System.Diagnostics.Stopwatch.StartNew();d.Tick=view=>{var now=updater.Status;if(now.State!=state){view.Reflow=true;return;}if(clock.Elapsed.TotalSeconds<next)return;next=clock.Elapsed.TotalSeconds+.2;message.Text=now.Message;progress.Text=now.State=="Downloading"?(now.Progress*100).ToString("0")+"%  ·  "+(now.Received/1048576d).ToString("0.0")+" / "+(now.Bytes/1048576d).ToString("0.0")+" MB":"";};
++            });
++        }
++    }
++}
+--- a/stable-remastered/tools/ClientUpdater/Program.cs
++++ b/stable-remastered/tools/ClientUpdater/Program.cs
+@@ -0,0 +1,23 @@
++using System;
++using System.IO;
++using System.Diagnostics;
++using System.Windows.Forms;
++using Newtonsoft.Json;
++using StableRemastered.Updates;
++class BoshsuUpdater
++{
++    [STAThread]static int Main(string[] args)
++    {
++        UpdateJob job=null;bool restart=false;
++        try{
++            if(args.Length!=1||Path.GetFullPath(args[0])!=Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"job.json"))return 2;
++            job=JsonConvert.DeserializeObject<UpdateJob>(File.ReadAllText(args[0]));
++            try{using(var parent=Process.GetProcessById(job.ParentId))if(!parent.WaitForExit(120000))throw new IOException("Boshsu is still running. The update was not applied.");}catch(ArgumentException){}
++            ClientUpdatePackage.Install(job);restart=true;
++            File.WriteAllText(Path.Combine(job.Root,"Updates","last-update.txt"),"Installed "+job.Tag+" at "+DateTime.UtcNow.ToString("O"));return 0;
++        }catch(Exception error){
++            if(job!=null)try{File.WriteAllText(Path.Combine(job.Root,"Updates","last-update.txt"),error.ToString());}catch{}
++            MessageBox.Show("The update could not finish. Existing files were restored where possible. See Updates/last-update.txt and the rollback folder.\n\n"+error.Message,"Boshsu update",MessageBoxButtons.OK,MessageBoxIcon.Error);return 1;
++        }finally{if(restart)try{Process.Start(new ProcessStartInfo(Path.Combine(job.Root,"Boshsu.exe")){WorkingDirectory=job.Root});}catch{}}
++    }
++}
