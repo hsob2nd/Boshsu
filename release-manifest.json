@@ -1,14 +1,14 @@
 {
   "Product": "Boshsu",
   "Version": "1.2",
-  "Tag": "v1.2.0-rc.5",
+  "Tag": "v1.2.0-rc.6",
   "Channel": "Prerelease",
   "Platform": "Windows x64",
   "FreshUserData": true,
   "DetailedTelemetryDefault": false,
   "AutomaticCrashUploads": false,
-  "ExeSHA256": "f118a51cd0ae3f3aeac13713731e2e4ac06a319b57b06886a124566886fc1ad5",
-  "NativeSHA256": "4068114659bda93d0c2e334293d9ccb672a221d909bff0f8c65587e5738b0acd",
+  "ExeSHA256": "2c9592f5951514d6eb08fd6199ed8650a2c71538c380d55c3b288e4b4964cded",
+  "NativeSHA256": "67913e4cdfc4293dae65957eb5c22a50e42989241d97524acfb5e98c9c340db0",
   "AssistModelSHA256": "b636fe27c4dc34bfd7a3dcf032b67dc9e43bc744fc80c073125fa4b57aecaa7e",
   "QualifiedAssistModelChanged": false,
   "PPRewardsChanged": false,
@@ -18,21 +18,21 @@
   "UpdaterChecks": 82,
   "LiveGitHubUpdateCheck": true,
   "InClientUpdates": true,
-  "UpdaterSHA256": "5ce3f2ce011bdce4263d71096c9764423881561c8eeca2fc5103b1d79dd23e55",
+  "UpdaterSHA256": "7825e7926155b658d7ce54fc0994bf85c3e56073f15b341a8b743de95992f1a0",
   "PhysicalDeviceFeelQualified": false,
   "PublicRedistributionCertified": false,
   "LiveOnlineQualified": false,
   "Files": {
     "Boshsu-1.2-clean.zip": {
-      "SHA256": "1ed5e4517ee32b511c113486230a9c7e8c7dadff01b4f088f37b90278fe449fa",
-      "Bytes": 161652150
+      "SHA256": "02006001ca3ce67684f407d20109764a0ad55a5b365bce48262313d6de28ba5a",
+      "Bytes": 161656460
     },
     "Boshsu-1.2-source.zip": {
-      "SHA256": "5600fdf27664bb34b0fc54467c4748ccc232f6d3cc1046ab306f59403a6a8787",
-      "Bytes": 131368231
+      "SHA256": "1d0db1ab589acbd9dd0965abb2d9196ea9a480c583b37159aaebae455dcb98d1",
+      "Bytes": 131379405
     },
     "SHA256SUMS.txt": {
-      "SHA256": "3b8154701c6f98792d1446f751fdd531b160cc5ca53b0ef1b71006659de85d99",
+      "SHA256": "fd4d879a37d27e4adb136377b45470b5644f7b4ac170e844f2aececf85f0baa7",
       "Bytes": 177
     }
   },
@@ -45,7 +45,13 @@
   "AutomaticRecorderRecognitionQualified": false,
   "ManualUpdates": true,
   "FreshZIPLaunchChecks": 13,
-  "GameplaySmokeCycles": 1,
-  "ManualUpdateE2E": true,
-  "PersonalClientAutoInstalled": false
+  "GameplaySmokeCycles": 3,
+  "ManualUpdateE2E": false,
+  "PersonalClientAutoInstalled": false,
+  "CommonSHA256": "b66f313a6bd4276732249481eb61d69bb3bf31994c680dc18b61e7098d3b7011",
+  "PauseChecks": 116,
+  "FrameLogChecks": 21,
+  "PriorManualUpdateE2ETag": "v1.2.0-rc.5",
+  "InheritedQualificationTag": "v1.2.0-rc.5",
+  "PlayerGameplayHitchesFullyResolved": false
 }

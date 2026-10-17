@@ -4,6 +4,15 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.2 RC6 — Pause-menu correctness and session diagnostics (17 October 2026)
+
+- Fixed a reproduced continuation-state bug: after Continue, reopening Pause and sending another continuation click could restart the map. The paused state now rejects continuation and clears stale confirmation.
+- Verified frozen map time and score through 116 active-pattern assertions across unassisted, Maple V1, Max Assist and Maple V3 contexts, including AC/Relax combinations, repeated Escape, Continue, tapping, focus regain, retry and exit. A separate 116-assertion lead-in run passed.
+- Kept limiter wait time in FPS measurements while excluding it from stall warnings. Changed native-client hitch reports from many queued lines to one compact record with lifecycle/map/GC context.
+- Removed per-difficulty start/completion chatter from normal release logs; timeouts remain visible. Capped loggers stop allocating/queuing writes, and background log writes are serialized.
+- Preserved 1 MiB normal-log limits, newest-session retention, detailed telemetry Off by default, assist strengths, PP rules and all player data. Manual/in-client updates and prior fixes remain included.
+- This does not claim every gameplay hitch has been eliminated. The player's late-session hitches were not captured after the previous logs filled. [Evidence and limits](docs/PAUSE_SPIKE_FIX.md).
+
 ## 1.2 RC5 — Windows discovery and manual updates (17 October 2026)
 
 - Added a stable Windows AppUserModelID before UI startup and a Boshsu window name from construction.

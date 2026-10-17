@@ -8,13 +8,13 @@ McOsu-derived code retains GPL-3.0, and original project modifications retain th
 
 Boshsu combines familiar song selection and skin-controlled gameplay with local profiles, custom PP systems, Map Lab, assistance settings, progression and player customization.
 
-**Current client: 1.2 RC5 · Windows x64 · release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
+**Current client: 1.2 RC6 · Windows x64 · release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
 
 ## Download
 
-- **[Portable Windows x64 beta package — Boshsu-1.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.5/Boshsu-1.2-clean.zip)**
-- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.5/Boshsu-1.2-source.zip)
-- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.5/SHA256SUMS.txt)
+- **[Portable Windows x64 beta package — Boshsu-1.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.6/Boshsu-1.2-clean.zip)**
+- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.6/Boshsu-1.2-source.zip)
+- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.2.0-rc.6/SHA256SUMS.txt)
 - [Release notes](CHANGELOG.md)
 
 The beta is a complete portable client package, not just an executable or source download. Extract the **whole client ZIP** into a writable folder and run **Boshsu.exe**. Keep its DLLs and resource folders together. Do not run the executable from inside the ZIP. The application is built for **Windows x64 and .NET Framework 4.8**; a separate compiler or PP calculator installation is not required to play.
@@ -22,6 +22,8 @@ The beta is a complete portable client package, not just an executable or source
 The clean package starts with fresh local data. It excludes the developer's profiles, scores, avatars, settings, map library, custom skins, replays and diagnostic history. It intentionally includes the same qualified assistance model and calculator modules as the personal build.
 
 No maps or custom skins are bundled. Choose your Songs library and skin in Options. First launch opens the Main Menu in fullscreen at the primary display's native resolution; later display changes are saved.
+
+RC6 fixes pause/continuation ownership and reduces diagnostic overhead while keeping storage limits. See [the correction and validation report](docs/PAUSE_SPIKE_FIX.md).
 
 RC5 adds optional per-user Windows application registration and a stable app identity, retaining RC4’s file-picker and RC3’s input/UI corrections. This supplies Windows discovery metadata; automatic recognition by AMD/Insights remains unverified. See [Windows discovery and research](docs/WINDOWS_DISCOVERY.md).
 
