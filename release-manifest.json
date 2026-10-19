@@ -21,7 +21,7 @@
   "IssueFixReport": "docs/STABLE_REMASTERED_V14_ISSUE_FIXES.md",
   "IssueLedger": "docs/GITHUB_ISSUE_WORK_REPORT.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": false,
+  "HostedCIQualified": true,
   "PhysicalDeviceFeelQualified": false,
   "LiveOnlineSubmissionQualified": false,
   "LinuxQualified": false,
@@ -67,5 +67,37 @@
     "RollbackVerified": true,
     "LiveInstallationTouched": false,
     "GameLaunched": false
-  }
+  },
+  "HostedCI": {
+    "Passed": true,
+    "RunId": 39321411056,
+    "Url": "https://github.com/hsob2nd/Boshsu/actions/runs/39321411056",
+    "Commit": "4c1781523f005f39ffa51c84b95ead3c7e00b8f4",
+    "Jobs": [
+      {
+        "Name": "verify",
+        "Status": "completed",
+        "Conclusion": "success"
+      },
+      {
+        "Name": "cpu-regression",
+        "Status": "completed",
+        "Conclusion": "success"
+      }
+    ],
+    "Scope": "Linux public-package/member/source integrity; Windows portable-host and source-compiled account/provider CPU fixtures. Not a full source build, Linux client launch, physical-device or all-hardware certificate."
+  },
+  "PublishedUpdateDiscovery": {
+    "Passed": true,
+    "Assertions": 6,
+    "BaselineTag": "v1.3.0-rc.1",
+    "SelectedTag": "v1.4.0-rc.1",
+    "UsesPublishedReleaseJSON": true,
+    "PlayerDataRead": false,
+    "GameLaunched": false,
+    "UpdateInstalled": false
+  },
+  "CompletedIssues": [
+    11
+  ]
 }
