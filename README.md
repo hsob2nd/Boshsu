@@ -8,13 +8,13 @@ McOsu-derived code retains GPL-3.0, and original project modifications retain th
 
 Boshsu combines familiar song selection and skin-controlled gameplay with local profiles, custom PP systems, Map Lab, assistance settings, progression and player customization.
 
-**Current client: 1.3 RC1 · Windows x64 · release candidate.** Offline Standard gameplay is the tested path. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md).
+**Current client: 1.4 RC1 · Windows x64 · release candidate.** Standard uses McOsu; supplied Taiko/Catch/Mania have initial lifecycle/replay qualification. Mode PP remains unavailable under the PP freeze. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md) and the [issue-fix ledger](docs/GITHUB_ISSUE_WORK_REPORT.md).
 
 ## Download
 
-- **[Portable Windows x64 beta package — Boshsu-1.3-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.3.0-rc.1/Boshsu-1.3-clean.zip)**
-- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.3.0-rc.1/Boshsu-1.3-source.zip)
-- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.3.0-rc.1/SHA256SUMS.txt)
+- **[Portable Windows x64 beta package — Boshsu-1.4-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.1/Boshsu-1.4-clean.zip)**
+- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.1/Boshsu-1.4-source.zip)
+- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.1/SHA256SUMS.txt)
 - [Release notes](CHANGELOG.md)
 
 The beta is a complete portable client package, not just an executable or source download. Extract the **whole client ZIP** into a writable folder and run **Boshsu.exe**. Keep its DLLs and resource folders together. Do not run the executable from inside the ZIP. The application is built for **Windows x64 and .NET Framework 4.8**; a separate compiler or PP calculator installation is not required to play.
@@ -22,6 +22,8 @@ The beta is a complete portable client package, not just an executable or source
 The clean package starts with fresh local data. It excludes the developer's profiles, scores, avatars, settings, map library, custom skins, replays and diagnostic history. It intentionally includes the same qualified assistance model and calculator modules as the personal build.
 
 No maps or custom skins are bundled. Choose your Songs library and skin in Options. First launch opens the Main Menu in fullscreen at the primary display's native resolution; later display changes are saved.
+
+Version 1.4 adds modes, replay exchange, folder imports, Kawata browsing and OBS setup while retaining the sealed 1.3 performance work and unchanged PP rules. See [the 1.4 qualification report](docs/STABLE_REMASTERED_V14_ISSUE_FIXES.md).
 
 Version 1.3 reduces recurring PP/UI allocations, reuses identical PP preparation and queues optional diagnostic disk work. It preserves the assist/reward model. Existing PP/replay edge cases and rare long frames remain documented; this is an optimization candidate, not a zero-spike or blanket correctness certificate. See [the Version 1.3 report](docs/STABLE_REMASTERED_V13_REPORT.md). RC6 fixed pause/continuation ownership and reduced diagnostic overhead while keeping storage limits. See [the correction and validation report](docs/PAUSE_SPIKE_FIX.md).
 

@@ -4,6 +4,19 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.4 RC1 — Modes, replays, integration and GitHub issue fixes (19 October 2026)
+
+- Added native Flashlight presentation and preserved its mod metadata.
+- Bounded Maple V1 corrections by actual physical movement; preserved Max Assist/V3 guidance math and historical implementation revision data.
+- Added safe Songs-folder linking and skin-copy import with cancellation, conflict preservation, immediate skin refresh and responsive navigation.
+- Reconnected supplied Taiko/Catch/Mania with separate local raw-score/replay storage and explicit Standard ownership handover. Their PP remains unavailable under the owner's PP freeze.
+- Added bounded OSR import, native Standard export with custom-settings companions, actual RNG seed recording and replay-only routing. Dense replay equivalence remains an open defect.
+- Added Kawata public profiles, plays, map leaderboards, standings, scoped sign-in and explicit server eligibility reasons. Upload remains gated on accepted server rules/identity/replay proof.
+- Added OBS scene setup export and verified actual OpenGL shared-texture recording. Other capture vendors' automatic recognition remains unqualified.
+- Repaired public CI fixtures to read shipped PP provider ZIPs rather than private development paths. All 2,876 protected PP source files match 1.3 RC1; no historical scores were recalculated.
+
+See [qualification and remaining limits](docs/STABLE_REMASTERED_V14_ISSUE_FIXES.md) and [issue dispositions](docs/GITHUB_ISSUE_WORK_REPORT.md). This release does not claim every issue or device combination is resolved. The intermediate 1.3 RC2 draft was never published; this feature release is Version 1.4.
+
 ## 1.3 RC1 — Bounded overhead, source builds and qualification (17 October 2026)
 
 - Preserved gameplay/assist models, map-time ownership, PP/reward rules, progression, profiles and skin-controlled gameplay. No duplicate DT/NC reward was restored.

@@ -25,3 +25,8 @@ Official references: [Insights Capture](https://insights.gg/), [Insights V3 anno
 Prefer the recorder's OpenGL-compatible game capture when available. Window capture of the visible Boshsu window is a separate capture path. If a recorder requires a visible desktop-composited window, use Boshsu's existing windowed/borderless display options; saved display settings remain the player's choice. Do not run the game as administrator merely to make it recordable.
 
 Only Boshsu's client-side visibility was audited here. Recording quality, hotkeys, audio routing and automatic detection depend on the selected recorder and should be tested in that product before being declared supported.
+
+
+## 1.4 actual OBS qualification
+
+See [Recording setup](CAPTURE_SETUP.md) for the in-client scene exporter and the limited real OBS OpenGL shared-texture recording test. Vendor automatic recognition remains unqualified.

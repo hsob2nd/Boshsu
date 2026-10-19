@@ -42,5 +42,5 @@ if ($LASTEXITCODE -ne 0) {throw 'Pinned test dependencies could not be restored'
 $hostFolder=Join-Path $source 'frontend/Bosh/osu!win/bin/x64/Release'
 New-Item -ItemType Directory -Path $hostFolder -Force | Out-Null
 Get-ChildItem -LiteralPath $packages.clean -File -Filter '*.dll' | Copy-Item -Destination $hostFolder
-& (Join-Path $source 'tools/Test-Accounts.ps1')
+& (Join-Path $source 'tools/Test-Accounts.ps1') -Runtime $packages.clean
 Write-Output 'Portable-host contracts/navigation/update and source-compiled account/PP-provider fixtures passed. This is not an OpenGL, physical-input or complete source-build certificate.'

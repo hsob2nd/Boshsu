@@ -1,0 +1,13 @@
+# Kawata integration
+
+Options → Online / Worlds → Kawata online, or universal search `kawata`, opens the provider. It supports public profiles, best/recent Standard plays, selected-map leaderboards and paginated performance standings. The provider additionally supports score, accuracy, playcount and country queries. Unknown top-play/monthly categories return unavailable instead of fabricated entries. Server-reported PP remains a separate type from local calculated PP and authenticated awards.
+
+The implementation was reviewed against [kawatapw/kawata.py at 391a9da978a266b1d9144a1adca2c6894d27eba3](https://github.com/kawatapw/kawata.py/tree/391a9da978a266b1d9144a1adca2c6894d27eba3). Public endpoints were verified live on 19 October 2026. The implemented provider passed live profile, standings, best, recent and beatmap-leaderboard requests. Public response data is not a score award or authenticated identity.
+
+Sign-in uses a separate session, restricted to `https://c.kawata.pw`. Bosh credentials/tokens are never forwarded there. HTTPS redirects are disabled for credential transport, requests have timeouts/cancellation and bounded responses, and logout/shutdown invalidate session state. The existing derivative identity recipe uses the actual executable hash rather than another client's approved hash. Sign-in has not been qualified with an actual Kawata account; client-version acceptance is controlled by the deployment. `/infos` advertised `b20240418.1` during the public connectivity check; this is not permission to impersonate its original client.
+
+The configurable eligibility model checks captured session identity, policy revision, expiry, mods, runtime speed, aim correction, Max Assist, Maple versions/strengths, FOV, slider automation, custom CS/AR, transformations, health protection, notelock and HD removal. It distinguishes eligible, local/unranked and unsupported attempts. Local gameplay stays unrestricted. No current numeric server rules were found in the reviewed source; there is no invented default ranked-assist policy.
+
+Score upload remains disabled. The verified backend submission route is `/web/osu-submit-modular-selector.php`; its authenticated payload/checksum, client identity, cheat-value metadata and replay proof need accepted deployment qualification. The old route additionally depends on `CHEAT_SERVER`. JSON cheat-value storage in source does not establish permitted assist limits. Missing rules and unqualified replay proof produce explicit reasons and no ranked upload queue. Multiplayer/spectator and replay transfer are not certified.
+
+26 provider/policy assertions passed without credentials or uploads. Existing 48 Bosh session assertions still pass. No local PP formulas or historical scores were changed.
