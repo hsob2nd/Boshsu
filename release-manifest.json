@@ -21,7 +21,7 @@
   "IssueFixReport": "docs/STABLE_REMASTERED_V15_MAX_ASSIST.md",
   "IssueLedger": "docs/GITHUB_ISSUE_WORK_REPORT.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": false,
+  "HostedCIQualified": true,
   "PhysicalDeviceFeelQualified": false,
   "UnclassifiedShutdownStallObserved": true,
   "DenseReplayQualified": false,
@@ -113,5 +113,26 @@
       "SHA256": "810e24f7052330ac601c415d69aaf92697749ec0b1da060094dba0f227f61927",
       "Bytes": 181
     }
+  },
+  "HostedCI": {
+    "Id": 39500841054,
+    "Status": "completed",
+    "Conclusion": "success",
+    "URL": "https://github.com/hsob2nd/Boshsu/actions/runs/39500841054",
+    "Head": "617cd01b5e9552f36750ad4d3cf297b26e38b391",
+    "Jobs": [
+      {
+        "Name": "verify",
+        "Status": "completed",
+        "Conclusion": "success"
+      },
+      {
+        "Name": "cpu-regression",
+        "Status": "completed",
+        "Conclusion": "success"
+      }
+    ],
+    "Passed": true,
+    "Scope": "Linux published ZIP/member/pinned-source integrity; Windows portable-host contracts and source-compiled account/provider/PP CPU fixtures. Not a full source build, Linux launch, GPU or physical-device certificate."
   }
 }
