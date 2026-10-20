@@ -40,3 +40,16 @@ The V2 menu run passed 416 checks across 1280×720, 1024×768 and 1600×900. It 
 Four real-client synthetic V2 cycles completed with AC off/on and manual/Relax input: 12 pause/resume pairs, 2 retries, clean return and shutdown. The capped sample contained 102,299 measured frames; weighted mean 1.0000 ms and maximum 5.4026 ms. Per-attempt p95 upper bounds: [1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001]; p99 upper bounds: [1.01, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001]. These include fixture pacing/transitions and are not end-to-end latency measurements. They do not establish a universal performance gain. The earlier equal two-cycle RC1/V1 comparison remains separate.
 
 The final native target-handoff fixture also ensures that fine-offset smoothing does not interpolate a previous object's plan into a newly selected target or a slider head into its body. Max remains the sole target owner. The model/data, V1 wrapper, Maple V1/V3 source and all 2,876 protected PP files are unchanged. The account/provider suite passed 3,451 assertions, including the 29 new selection/persistence checks. All eleven portable-host CPU suites passed (28,560 assertions). Matching package sealing, update/rollback and publication are separate delivery checks.
+
+## Post-publication validation
+
+These checks were recorded after sealing and do not change the attached executable/source ZIPs.
+
+- Final clean ZIP: 1,646 files; SHA256 `2849940b8d8508abaffbd4cce07e8e05f00528dfffd71c52bf82f765cf989c22`.
+- Corresponding source: 7,429 curated files plus archive readme; SHA256 `086fbe5fe3ccda7e7ef28993bd70bd7c5dc07cef5a28ff454a1733564ddc4067`. All 948 pinned McEngine inputs verified.
+- Two fresh final-ZIP launches reached Main and shut down cleanly; the same fresh profile persisted. Native fullscreen resolution saved at 1920×1080 under the left-monitor test override.
+- The final complete package passed 1,680 installer/rollback assertions with all 15 protected synthetic files preserved.
+- The actual published release JSON passed six old-client discovery checks: sealed 1.4 RC1 selected RC2's expected clean ZIP, allowed origin and digest, without launching or installing a game.
+- Both hosted package integrity and Windows CPU regression jobs passed on the exact release commit `5c5b086545c7fa68caef4b4cc107acb4213ca565`. These remain narrower than physical-device, native GPU and all-PC qualification.
+
+[Hosted verification run](https://github.com/hsob2nd/Boshsu/actions/runs/39481242183).

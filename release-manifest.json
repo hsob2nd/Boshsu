@@ -19,7 +19,7 @@
   "IssueFixReport": "docs/STABLE_REMASTERED_V14_MOVEMENT_REPORT.md",
   "IssueLedger": "docs/GITHUB_ISSUE_WORK_REPORT.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": false,
+  "HostedCIQualified": true,
   "PhysicalDeviceFeelQualified": false,
   "LiveOnlineSubmissionQualified": false,
   "LinuxQualified": false,
@@ -76,5 +76,36 @@
   ],
   "DefaultMaxAssistVariant": "V1",
   "MaxV2Optional": true,
-  "MapleImplementationChanged": false
+  "MapleImplementationChanged": false,
+  "HostedCI": {
+    "RunId": 39481242183,
+    "URL": "https://github.com/hsob2nd/Boshsu/actions/runs/39481242183",
+    "Commit": "5c5b086545c7fa68caef4b4cc107acb4213ca565",
+    "Status": "completed",
+    "Conclusion": "success",
+    "Jobs": [
+      {
+        "Name": "verify",
+        "Status": "completed",
+        "Conclusion": "success"
+      },
+      {
+        "Name": "cpu-regression",
+        "Status": "completed",
+        "Conclusion": "success"
+      }
+    ],
+    "Passed": true,
+    "Scope": "Linux public ZIP/member/pinned-source integrity and Windows portable-host/source-compiled account/provider CPU fixtures; not a full source build, Linux client launch, native GPU or physical-device certificate."
+  },
+  "PublishedUpdateDiscovery": {
+    "Passed": true,
+    "Assertions": 6,
+    "BaselineTag": "v1.4.0-rc.1",
+    "SelectedTag": "v1.4.0-rc.2",
+    "UsesPublishedReleaseJSON": true,
+    "PlayerDataRead": false,
+    "GameLaunched": false,
+    "UpdateInstalled": false
+  }
 }
