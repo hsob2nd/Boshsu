@@ -4,6 +4,21 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.5.1 — Max Assist refinement, Adaptive Assist and aim style presets (20 October 2026)
+
+- Promoted the previous Max V2 to the normal Max Assist and removed the retired Max V1 selector/publication path. Historical contexts remain readable. Maple V1/V3 stay separate.
+- Fixed extra render polls between device packets weakening guidance, with rate-aware device-gap handling and time-based idle release. Fixed new learning sample undercounting and partial-data reset on timeline changes.
+- Fixed added fine guidance persisting past a closing planned endpoint. A controlled curved approach improved from 7.936 to 0.0935 canonical units of endpoint error at the previous maximum.
+- Added normalized strength: 100% matches the previous V2 maximum, with an optional tested 125% limit. The qualified model stays within its supported input range; correction still uses one physical-movement budget and the game clock.
+- Replaced the jumbled Max controls with a dedicated page: strength, target refinement, automatic/guided sliders and an Advanced planner section. Search and Assists use the same page.
+- Added Adaptive Assist (experimental), a separate full-planned-route mode. Explicit opt-in local learning uses raw mouse/tablet motion, bounded directional-curvature statistics and per-profile persistence; it never learns from corrected output or changes PP/hit timing. Learning defaults Off.
+- Added ten optional aim-style presets using existing route controls while preserving strength, slider mode, AC, Relax, rate and learning choice.
+- Preserved Max/Maple exclusivity, AC/Relax independence, automatic slider ownership, movement-only AFK protection, user data and all PP rules. Detailed session diagnostics retain their existing hard limits.
+- Passed qualified-model/ownership, learning/storage, rendered-navigation, desktop-interaction, gameplay lifecycle, package startup and update/rollback checks. Performance and physical-device scope are documented rather than presented as a zero-spike promise.
+- Adopted ordinary patch version names such as 1.5.1 and 1.5.2. Earlier RC history is retained unchanged.
+
+See [1.5.1 integration and testing](docs/STABLE_REMASTERED_V15_MAX_ASSIST.md).
+
 ## 1.4 RC2 — Max Assist V2, movement and queue fixes (20 October 2026)
 
 - Kept movement-fixed Max Assist as V1 and added an optional V2 under Options → Assists → Max Assist. Existing profiles default to V1.

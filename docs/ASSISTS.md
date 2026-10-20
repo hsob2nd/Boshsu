@@ -33,3 +33,13 @@ Gameplay decisions use the map/gameplay clock. AFK activity uses monotonic real 
 ## Reporting inconsistent behavior
 
 Include the map/difficulty, mods, runtime Timewarp, generated Map Lab metadata, cursor mode/strength, AC, Relax and slider settings. Describe whether movement, target switching, tapping or a slider body is wrong. A miss count alone does not establish which owner failed. Do not post private profiles or authentication files.
+
+## Max Assist in 1.5.1
+
+The former Max V2 is now the normal **Max Assist**. Open **Options → Assists → Max Assist**. **100%** equals the previous maximum; 101–125% is an optional extended range. Existing lower intensity is preserved until you edit strength. Target refinement is separate from strength. **Aim style** offers ten optional route presets; Advanced edits show Custom. Presets preserve strength, slider mode, AC, Relax, rate and learning consent.
+
+Choose **Automatic 100%** sliders for full native body ownership, or **Guided** to expose the guided-slider refinement slider. AC is not required. Advanced planner retains meaningful shape, directness, precision, timing and conditional input-matching preferences.
+
+**Adaptive Assist** follows the model's full route while you actively move. Enable Max Assist and select Adaptive mode before learning can collect movement. **Local movement learning** is Off until you explicitly enable it on the explanation screen. It needs extra raw mouse/tablet cursor telemetry captured before assistance, and meaningful directed movement. It starts untrained and adapts gradually; improvement is not guaranteed. With learning off there is planned guidance only. It records bounded extra session diagnostics and stores a small per-profile raw-motion curvature summary locally. No corrected cursor output, replay or stationary jitter is training data; no data is uploaded. Learning does not change PP, target deadlines or hit windows. Reset deletes only that profile's learning summary and backup.
+
+Detailed behavior, the endpoint correction and qualification limits are in the [1.5.1 report](STABLE_REMASTERED_V15_MAX_ASSIST.md). Real play testing is still needed to compare personal feel; the strongest setting is not guaranteed to suit every player.

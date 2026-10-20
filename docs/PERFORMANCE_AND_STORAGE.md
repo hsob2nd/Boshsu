@@ -32,3 +32,7 @@ Cleanup is limited to recognized application diagnostic files. It does not recur
 Scores, native replay files and generated Map Lab audio are saved player content, not telemetry. Their storage can grow as you play or author variants. Back them up and manage that library deliberately. The log limits do not silently erase play history.
 
 To report a bug, copy the relevant current-session logs **before the next launch** if you explicitly recorded them. Review/redact them before attaching anything to a public issue. Never upload passwords, tokens, account configuration or an entire personal installation.
+
+## Optional 1.5.1 movement learning
+
+Adaptive Assist learning separately requires explicit opt-in and temporarily enables the existing bounded assistance diagnostics for its gameplay context. The additional persistent data is one aggregate under 16 KiB plus one backup per immutable local profile. It contains eight directional counts/curvature sums and at most 32 recent attempt IDs, not raw cursor traces. It is separate from session logs, survives restart and is removed by Reset learned movement profile. No learning data is uploaded.

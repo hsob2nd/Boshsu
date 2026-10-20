@@ -1,111 +1,117 @@
 {
   "Product": "Boshsu",
-  "Version": "1.4",
-  "Tag": "v1.4.0-rc.2",
+  "Version": "1.5.1",
+  "Tag": "v1.5.1",
   "Channel": "Prerelease",
   "Platform": "Windows x64",
-  "InheritedBaselineTag": "v1.4.0-rc.1",
+  "InheritedBaselineTag": "v1.4.0-rc.2",
   "FreshUserData": true,
   "PersonalDataIncluded": false,
-  "PersonalClientAutoInstalled": false,
   "DetailedTelemetryDefault": false,
+  "LearningDefault": false,
   "AutomaticCrashUploads": false,
   "PPRewardsChanged": false,
   "SavedScoresRecalculated": false,
   "ProtectedPPFilesUnchanged": 2876,
+  "MapleImplementationChanged": false,
   "QualifiedAssistModelChanged": false,
-  "CPUAssertions": 28560,
-  "AccountProviderAssertions": 3451,
-  "IssueFixReport": "docs/STABLE_REMASTERED_V14_MOVEMENT_REPORT.md",
+  "MaxAssistAssertions": 59232,
+  "AccountProviderAssertions": 3487,
+  "GameplayCycles": 8,
+  "IssueFixReport": "docs/STABLE_REMASTERED_V15_MAX_ASSIST.md",
   "IssueLedger": "docs/GITHUB_ISSUE_WORK_REPORT.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": true,
+  "HostedCIQualified": false,
   "PhysicalDeviceFeelQualified": false,
+  "UnclassifiedShutdownStallObserved": true,
+  "DenseReplayQualified": false,
   "LiveOnlineSubmissionQualified": false,
   "LinuxQualified": false,
   "PublicRedistributionCertified": false,
-  "Files": {
-    "Boshsu-1.4-clean.zip": {
-      "SHA256": "2849940b8d8508abaffbd4cce07e8e05f00528dfffd71c52bf82f765cf989c22",
-      "Bytes": 161727814
-    },
-    "Boshsu-1.4-source.zip": {
-      "SHA256": "086fbe5fe3ccda7e7ef28993bd70bd7c5dc07cef5a28ff454a1733564ddc4067",
-      "Bytes": 125986893
-    },
-    "SHA256SUMS.txt": {
-      "SHA256": "2041478c172477c52d04112bd6e2024a9fa7549db4dc884124c37c8383b7cd1f",
-      "Bytes": 177
-    }
-  },
-  "ExeSHA256": "24826d06522dca5243058e2b2a9d926aa98dcaf300065dc6da5b4e5cb6632755",
-  "CommonSHA256": "126fe21a83ef425f169af1de77468f16f69529fd2d7dfbdade74e60916700a43",
-  "UpdaterSHA256": "769502313a474d72f9e383579d9c997f9cf411e036e34e8f5dde8c59905709cc",
-  "NativeSHA256": "5b1203b81888da6c4f633dc00c6de597b164879a277817669211e1b7b3bd205b",
-  "AssistModelSHA256": "b636fe27c4dc34bfd7a3dcf032b67dc9e43bc744fc80c073125fa4b57aecaa7e",
-  "AssistModelDataSHA256": "0d57186a1c01b59f60d431c73395909cff41a2a2dc98c3245f79c27cbf7f602f",
-  "PortableColdStart": {
-    "Passed": true,
-    "Tag": "v1.4.0-rc.2",
-    "Launches": 2,
-    "MainReached": true,
-    "ShutdownCompleted": true,
-    "FreshProfileRetained": true,
-    "Fullscreen": true,
-    "TestMonitorOverride": true
-  },
   "PackagePreservation": {
     "Passed": true,
-    "Checks": 1680,
-    "ProtectedFiles": 15,
-    "ApplicationFiles": 1645,
+    "Checks": 1669,
+    "ProtectedFiles": 9,
+    "ApplicationFiles": 1646,
     "RollbackVerified": true,
     "LiveInstallationTouched": false,
     "GameLaunched": false,
     "Scope": "Actual complete package installed into a marked copy of the verified private portable checkpoint. Protected file bytes preserved; updater staging/recovery intentionally excluded. No player content uploaded."
   },
-  "CompletedIssues": [
-    11
-  ],
-  "MaxV1MovementAssertions": 38349,
-  "MaxV2Assertions": 95366,
-  "MenuAssertions": 416,
-  "MaxAssistVariants": [
-    "V1",
-    "V2"
-  ],
-  "DefaultMaxAssistVariant": "V1",
-  "MaxV2Optional": true,
-  "MapleImplementationChanged": false,
-  "HostedCI": {
-    "RunId": 39481242183,
-    "URL": "https://github.com/hsob2nd/Boshsu/actions/runs/39481242183",
-    "Commit": "5c5b086545c7fa68caef4b4cc107acb4213ca565",
-    "Status": "completed",
-    "Conclusion": "success",
-    "Jobs": [
+  "PortableColdStart": {
+    "Passed": true,
+    "FirstLaunchChecks": 8,
+    "SavedRestartChecks": 5,
+    "FullScreenNativePrimaryDefault": true,
+    "MainMenuStartup": true,
+    "SavedDisplayChoicePreserved": true,
+    "FreshUserData": true,
+    "ShutdownReceipts": [
       {
-        "Name": "verify",
-        "Status": "completed",
-        "Conclusion": "success"
+        "MainReturned": true,
+        "ShutdownCompleted": true
       },
       {
-        "Name": "cpu-regression",
-        "Status": "completed",
-        "Conclusion": "success"
+        "MainReturned": true,
+        "ShutdownCompleted": true
       }
     ],
-    "Passed": true,
-    "Scope": "Linux public ZIP/member/pinned-source integrity and Windows portable-host/source-compiled account/provider CPU fixtures; not a full source build, Linux client launch, native GPU or physical-device certificate."
+    "PackageSHA256": "fed4731e303522ab70978a63c4be42438e2d0fdb2268d96cc8dd2656ff0f98f0",
+    "Scope": "Exact sealed clean ZIP extracted and launched twice on this Windows PC; isolated monitor override keeps the actual window on the left monitor. Not all hardware/DPI certification."
   },
-  "PublishedUpdateDiscovery": {
+  "DesktopInteraction": {
     "Passed": true,
-    "Assertions": 6,
-    "BaselineTag": "v1.4.0-rc.1",
-    "SelectedTag": "v1.4.0-rc.2",
-    "UsesPublishedReleaseJSON": true,
-    "PlayerDataRead": false,
-    "GameLaunched": false,
-    "UpdateInstalled": false
+    "Scope": "Windows injected clicks, wheel and drag through computer-use; not human mouse/tablet gameplay feel.",
+    "Base": {
+      "Passed": true,
+      "Scope": "Windows injected mouse/keyboard actions through the computer-use skill; not human physical-device gameplay.",
+      "Actions": [
+        "Options click",
+        "Assists click",
+        "Max Assist click",
+        "Drag strength from 100 to 114",
+        "Automatic to Guided slider ownership",
+        "Open Advanced planner",
+        "Close own test with Alt+F4"
+      ],
+      "SavedStrength": 1.14,
+      "LearningEnabled": false,
+      "Shutdown": {
+        "MainReturned": true,
+        "ShutdownCompleted": true
+      }
+    },
+    "FinalActions": [
+      "Open Options / Assists / Max with left click",
+      "Open ten-style list",
+      "Wheel scroll stays on same page",
+      "Drag scrollbar to lower styles",
+      "Click Streams and verify saved values",
+      "Switch Standard to Adaptive without enabling learning",
+      "Drag to learning status; Off with zero samples",
+      "Close isolated test cleanly"
+    ],
+    "Preset": "Streams",
+    "StrengthUnchanged": true,
+    "LearningStayedOff": true,
+    "Shutdown": {
+      "MainReturned": true,
+      "ShutdownCompleted": true
+    },
+    "FinalTextOnlyFollowup": "Learning paused wording when Max disabled; no behavior/layout change."
+  },
+  "Files": {
+    "Boshsu-1.5.1-clean.zip": {
+      "SHA256": "fed4731e303522ab70978a63c4be42438e2d0fdb2268d96cc8dd2656ff0f98f0",
+      "Bytes": 161750051
+    },
+    "Boshsu-1.5.1-source.zip": {
+      "SHA256": "1ea874287b5f4a59367027f79b2e590eaba569000a2cc76aefbfb9f254e5421e",
+      "Bytes": 126009701
+    },
+    "SHA256SUMS.txt": {
+      "SHA256": "810e24f7052330ac601c415d69aaf92697749ec0b1da060094dba0f227f61927",
+      "Bytes": 181
+    }
   }
 }
