@@ -1,0 +1,985 @@
+--- a/stable-remastered/README.md
++++ b/stable-remastered/README.md
+@@ -1,6 +1,6 @@
+ # Boshsu
+ 
+-The Bosh / osu!stable personal-client experience with an internal McOsu gameplay runtime. The frontend and gameplay share one main window, application loop and audio device. Version 1.3 is an optimization pass; it preserves the qualified gameplay, assistance, PP and progression rules.
++The Bosh / osu!stable personal-client experience with an internal McOsu Standard gameplay runtime and supplied Bosh additional modes. The frontend and gameplay share one main window, application loop and audio device. Version 1.4 extends the sealed 1.3 optimization work with replay exchange, folder imports and provider integration. Max Assist V1 keeps its movement-budget fix; optional V2 adds bounded target/slider refinement around the same qualified planner. Choose it in Options → Assists → Max Assist. PP rules remain unchanged.
+ 
+ Current subsystem, ownership and storage documentation lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/THREADING.md](docs/THREADING.md), [docs/DATA_LAYOUT.md](docs/DATA_LAYOUT.md), [docs/PERFORMANCE.md](docs/PERFORMANCE.md) and [docs/STRUCTURE.md](docs/STRUCTURE.md). Historical development reports describe their own checkpoints, not the current supported launch path. Qualification reports record actual tested scope and remaining limitations.
+ 
+--- /dev/null
++++ b/stable-remastered/STABLE_REMASTERED_V14_MOVEMENT_REPORT.md
+@@ -0,0 +1,42 @@
++# Boshsu 1.4 RC2 — Max Assist V1/V2 and background scheduling
++
++This patch continues 1.4 RC1. It applies the existing Maple V1 physical-movement correction budget around Max Assist's qualified model. Max intensity remains 0–0.50, with 0.50 representing its full budget. The model, training data, target/deadline selection, AC, Relax, independent automatic slider authority and PP formulas/rewards are retained.
++
++Additional Max offset is bounded by actual canonical mouse/tablet displacement, scaled by the existing intensity. Repeated polls within one map millisecond cannot accumulate extra pull. Stationary/tiny movement releases the old offset using the same map-time resynchronization principle as V1. Map ownership, retry, pause, invalid data, activity release and long clock gaps clear the budget state. The wrapper allocates no objects, performs no I/O and creates no worker. It runs in the existing authoritative gameplay transaction. No FPS or CPU-thread-count multiplier was added.
++
++Maple V1 and V3 implementation files are unchanged. Automatic slider bodies continue through their existing explicit owner after movement guidance; the Max movement cap does not limit their separate full-authority path.
++
++## Optional Max Assist V2
++
++Options → Assists → Max Assist now offers V1 and V2. Existing profiles and historical contexts default to V1. The choice and two V2 refinement sliders (0–2) are saved per immutable local profile and captured in gameplay/replay context. Changing version leaves the original planner settings and V2 tuning intact. Invalid stored selections fall back to V1 without rewriting history; edits are blocked during gameplay.
++
++V2 keeps the same qualified model, target/deadline ownership, main intensity, activity protection and native AC/Relax/slider coordinator. It adds bounded movement-relative refinement toward that single target, a diminishing-return gain curve, softer correction near the valid hit region and separate authored-slider-path refinement. No secondary Maple target selector runs. Additional refinement is capped radially; it never clamps the original Max plan to that small radius. Coarse movement and fine correction share one physical displacement budget, rather than stacking two unrestricted cursor outputs.
++
++Refinement integrates observed raw/planned positions on the map millisecond clock. Repeated same-clock polling cannot acquire more guidance. A stopped cursor releases guidance; map, clock, policy, activity, settings and ownership resets discard stale state. The implementation creates no worker, writes no files and reads no CPU-thread-count or render-FPS gain. Automatic sliders remain their separate 100% native body authority with AC on or off; the slider refinement setting controls guided behavior. It does not replace that ownership switch.
++
++The first V2 fixture found an engagement-edge rounding difference between interpolated paths at different callback rates. A sub-nanounit FOV comparison tolerance corrected that boundary. The corrected fixture passed 95,366 assertions, including 224 equal map-clock paths, 25,110 actual qualified-planner/coordinator samples and 6,416 slider-body samples. Twenty-nine additional settings/persistence checks cover historical defaults, supported ranges, context serialization, isolation, rename/restart and corrupt-selection recovery. These are deterministic/synthetic checks, not physical-device feel certification.
++
++The shell artwork scheduler previously created a 20 ms polling delay for every blocked job during gameplay. It now waits for actual mode, capacity, settings or cancellation signals. Queue/concurrency limits, cancellation, error visibility and shutdown behavior remain. Already-running decode jobs may finish; new ones wait during gameplay. No frame-loop lock or per-frame scheduler callback was introduced.
++
++Three isolated comparisons with 48 blocked jobs measured 196,608–221,184 allocated bytes per 300 ms in the old implementation, versus zero in all three candidate samples. Median old allocation was 212,992 bytes. Both implementations passed 18 admission/cancellation/failure/shutdown assertions each run. This measures queued-artwork overhead; it does not certify an FPS gain or eliminate GPU/OS stalls.
++
++The latest personal session logs were retained privately before update. They recorded no handled/hard-crash errors and a clean shutdown. The largest logged gameplay-mode stall was a 2,110.83 ms first surface attachment while Loading; the largest logged Playing stall was 16.71 ms, dominated by drawing. Those transition/GPU stalls are not relabelled as fixed. Slow-frame logs alone cannot establish full-session percentiles or mean FPS.
++
++## Qualification
++
++- Max wrapper: 38,349 assertions, 17,676 bounded samples, 84 equal straight-path comparisons at 60–4,000 Hz and multiple runtime rates, plus 8,370 real qualified-planner/coordinator observations.
++- Qualified underlying model: 45 original trajectory files / 190,859 samples remain byte-identical. Model and data hashes match 1.4 RC1.
++- Maple regression: 20,315 assertions, 1,120 invariance cases, 168 captures from outside the circle. No V1/V3 source change.
++- Independent slider regression: 1,001,752 assertions and 530,880 body samples. Existing AC/Relax/activity/ownership fixtures passed.
++- All eleven release CPU suites passed, including the new production-source worker queue fixture (28,560 assertions total).
++- Native/managed builds passed on the development Windows toolchain. Runtime/package checks and hosted delivery are recorded separately after completion.
++
++Physical mouse/tablet feel, all hardware, accepted Kawata submissions and the previously documented dense replay defect remain outside this evidence. Existing PP edge cases and historical score awards are unchanged.
++
++## Final candidate checks
++
++The V2 menu run passed 416 checks across 1280×720, 1024×768 and 1600×900. It exercised actual rendered version choices, independent refinement sliders, original controls, Maple/Max exclusivity, scroll/back navigation and captured gameplay settings. Screens were reviewed at native viewport size. This uses application-owned scripted controls, not physical mouse/tablet testing.
++
++Four real-client synthetic V2 cycles completed with AC off/on and manual/Relax input: 12 pause/resume pairs, 2 retries, clean return and shutdown. The capped sample contained 102,299 measured frames; weighted mean 1.0000 ms and maximum 5.4026 ms. Per-attempt p95 upper bounds: [1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001]; p99 upper bounds: [1.01, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001, 1.0050000000000001]. These include fixture pacing/transitions and are not end-to-end latency measurements. They do not establish a universal performance gain. The earlier equal two-cycle RC1/V1 comparison remains separate.
++
++The final native target-handoff fixture also ensures that fine-offset smoothing does not interpolate a previous object's plan into a newly selected target or a slider head into its body. Max remains the sole target owner. The model/data, V1 wrapper, Maple V1/V3 source and all 2,876 protected PP files are unchanged. The account/provider suite passed 3,451 assertions, including the 29 new selection/persistence checks. All eleven portable-host CPU suites passed (28,560 assertions). Matching package sealing, update/rollback and publication are separate delivery checks.
+--- a/stable-remastered/application/Accounts/AccountSession.cs
++++ b/stable-remastered/application/Accounts/AccountSession.cs
+@@ -39,6 +39,7 @@
+         internal PPProviderSelection ActivePPProvider {get;private set;}
+         internal string ActivePPProviderKey {get;private set;}
+         internal MapleSettings Maple {get;private set;}
++        internal MaxAssistOptions MaxAssist {get;private set;}
+         internal Action AcquireMapleCursor {get;set;}
+         internal object QualificationHealth=>new {Queued=jobs.Count,Completed=completed.Count,Worker=worker.Status.ToString(),Disposed=disposed,ScheduledAttempts=scheduled.Count};
+         internal AccountSession(string directory,ILocalPPCalculator pp,IAccountProvider serverProvider,string legacyDirectory=null)
+@@ -84,7 +85,8 @@
+             }
+             Store.SetMode(mode);Mode=mode;Profile=null;Best=new List<BestPlayModel>().AsReadOnly();Recent=Best;Refresh();
+         }
+-        private void RefreshPPSelection(){ActivePPProvider=Store.ProviderFor(ProfileId,Environment);ActivePPProviderKey=ActivePPProvider.Key;Maple=Store.MapleFor(ProfileId);if(Maple.Enabled)AcquireMapleCursor?.Invoke();}
++        private void RefreshPPSelection(){ActivePPProvider=Store.ProviderFor(ProfileId,Environment);ActivePPProviderKey=ActivePPProvider.Key;MaxAssist=Store.MaxAssistFor(ProfileId);Maple=Store.MapleFor(ProfileId);if(Maple.Enabled)AcquireMapleCursor?.Invoke();}
++        internal void SetMaxAssist(MaxAssistOptions value){if(osu.GameBase.Mode==osu.OsuModes.Play)throw new InvalidOperationException("Change Max Assist after leaving gameplay.");Store.SetMaxAssist(ProfileId,value);MaxAssist=Store.MaxAssistFor(ProfileId);Changed?.Invoke();}
+         internal void SetMaple(MapleSettings value){if(osu.GameBase.Mode==osu.OsuModes.Play)throw new InvalidOperationException("Change Maple after leaving gameplay.");value.Validate();if(value.Enabled)AcquireMapleCursor?.Invoke();Store.SetMaple(ProfileId,value);Maple=Store.MapleFor(ProfileId);Changed?.Invoke();}
+         internal void SwitchProfile(Guid id){Store.SwitchProfile(id);RefreshPPSelection();Mode=AccountMode.Offline;Profile=null;Best=new List<BestPlayModel>().AsReadOnly();Recent=Best;Refresh();}
+         internal void SwitchEnvironment(OfflineEnvironment value){Store.SetEnvironment(value);RefreshPPSelection();Mode=AccountMode.Offline;Profile=null;Best=new List<BestPlayModel>().AsReadOnly();Recent=Best;Refresh();}
+--- a/stable-remastered/application/Accounts/LocalAccountStore.cs
++++ b/stable-remastered/application/Accounts/LocalAccountStore.cs
+@@ -185,6 +185,15 @@
+             lock(gate){RequireWrite();var next=Clone(manifest);var owner=next.Profiles.First(p=>p.Id==profile);if(owner.PPSystems==null)owner.PPSystems=new Dictionary<OfflineEnvironment,PPProviderSelection>();owner.PPSystems[environment]=Clone(selected);Write(Path.Combine(root,"profiles.json"),"profiles",next);manifest=next;revision++;}
+         }
+         internal MapleSettings MapleFor(Guid profile){lock(gate){var value=Clone(manifest.Profiles.First(p=>p.Id==profile).Maple??new MapleSettings());try{bool retired=!MapleSettings.IsSupported(value.Version);if(value.NormalizeSupportedRanges())Warning=retired?"V2 and VL1 have been retired. Maple is off; select V1 or V3. Saved history is preserved.":"Older Maple values are using supported ranges. Saved profile history is preserved; editing Maple saves the corrected settings.";return value;}catch(ArgumentException){Warning="Invalid stored Maple settings. Maple is inactive until reset; existing Max Assist settings and profile data are preserved.";return new MapleSettings();}}}
++        internal MaxAssistOptions MaxAssistFor(Guid profile)
++        {
++            lock(gate){var value=Clone(manifest.Profiles.First(p=>p.Id==profile).MaxAssist??new MaxAssistOptions());try{value.Validate();return value;}catch(ArgumentException){Warning="Invalid Max Assist selection. V1 is used until you choose valid settings; profile history is preserved.";return new MaxAssistOptions();}}
++        }
++        internal void SetMaxAssist(Guid profile,MaxAssistOptions value)
++        {
++            if(value==null)throw new ArgumentNullException(nameof(value));value.Validate();
++            lock(gate){RequireWrite();var next=Clone(manifest);next.Profiles.First(p=>p.Id==profile).MaxAssist=Clone(value);Write(Path.Combine(root,"profiles.json"),"profiles",next);manifest=next;revision++;}
++        }
+         internal void SetMaple(Guid profile,MapleSettings value)
+         {
+             if(value==null)throw new ArgumentNullException(nameof(value));value.Validate();
+--- a/stable-remastered/application/GameplaySettingsMapper.cs
++++ b/stable-remastered/application/GameplaySettingsMapper.cs
+@@ -23,7 +23,7 @@
+                 Relax=ConfigManager.qRelax,DisableNotelock=ConfigManager.sDisableNotelock,AimCorrection=ConfigManager.qAimCorrect,AimRadius=ConfigManager.qAimCorrectValue.Value,RelaxAimRadius=ConfigManager.qAimCorrectRXValue.Value,
+                 SliderTracking=ConfigManager.qSliderTracking,MaxAssistAutomaticSliders=ConfigManager.qMaxAssistAutomaticSliders,HiddenRemover=ConfigManager.qHDRem,CircleSizeChanger=ConfigManager.qCSChanger,CircleSize=ConfigManager.qCSChangerValue,
+                 MaxAssistEnabled=flag("MaxAssistEnabled"),AssistIntensity=number("AssistIntensity"),GoldenStyle=number("GoldenStyle"),PathDirectness=number("PathDirectness"),EndpointPrecision=number("EndpointPrecision"),TimingPriority=number("TimingPriority"),InputIntent=number("InputIntent"),
+-                Maple=CaptureMaple(),
++                Maple=CaptureMaple(),MaxAssist=Accounts.LocalAccountStore.Clone(ApplicationServices.Accounts?.MaxAssist??new MaxAssistOptions()),
+                 RotationDegrees=number("MapRotationDegrees"),FlipHorizontal=(((int)number("MapFlipMode"))&1)!=0,FlipVertical=(((int)number("MapFlipMode"))&2)!=0,OffsetMs=ConfigManager.sOffset,
+                 MasterVolume=AudioEngine.VolumeMaster.Value/100.0,MusicVolume=AudioEngine.VolumeMusic.Value/100.0,EffectsVolume=AudioEngine.VolumeEffect.Value/100.0,
+                 // Existing feel is the default; optional mastery can explicitly
+--- a/stable-remastered/application/Program.cs
++++ b/stable-remastered/application/Program.cs
+@@ -11,8 +11,8 @@
+ [assembly: InternalsVisibleTo("MaxAssist.PersonalGolden.Runtime")]
+ [assembly: System.Reflection.AssemblyProduct("Boshsu")]
+ [assembly: System.Reflection.AssemblyTitle("Boshsu")]
+-[assembly: System.Reflection.AssemblyFileVersion("1.4.0.0")]
+-[assembly: System.Reflection.AssemblyInformationalVersion("1.4.0-rc.1")]
++[assembly: System.Reflection.AssemblyFileVersion("1.4.0.1")]
++[assembly: System.Reflection.AssemblyInformationalVersion("1.4.0-rc.2")]
+ 
+ namespace StableRemastered.Application
+ {
+--- a/stable-remastered/application/Shell/ShellAssistPage.cs
++++ b/stable-remastered/application/Shell/ShellAssistPage.cs
+@@ -4,6 +4,8 @@
+ using osu;
+ using osu.GameModes.Options;
+ using StableRemastered.Shell;
++using StableRemastered.Gameplay;
++using StableRemastered.Application.Accounts;
+ namespace StableRemastered.Application.Shell
+ {
+     internal static partial class ShellPresentation
+@@ -34,23 +36,37 @@
+         internal static List<IGrouping<string,OptionElement>> AssistRegistry()=>GameBase.Options.ShellElements
+             .Where(o=>!o.IsHeaderElement && !(o is OptionSection) && !(o is OptionText) && !o.Hidden && OptionCategoryName(o)=="Assists")
+             .Distinct().GroupBy(AssistKey).OrderBy(g=>g.Key=="Max Assist"?0:g.Key=="Relax"?1:g.Key=="Aim Correction"?2:3).ThenBy(g=>g.Key).ToList();
++        static void ChangeMaxAssist(Action<MaxAssistOptions> change,BoshDialog d,bool reflow=true)
++        {
++            Safe(()=>{var value=LocalAccountStore.Clone(ApplicationServices.Accounts.MaxAssist);change(value);ApplicationServices.Accounts.SetMaxAssist(value);if(reflow&&!d.Disposed)d.Reflow=true;},"Max Assist setting unavailable");
++        }
++        static void DrawMaxAssistVersion(BoshDialog d,MaxAssistOptions active,int n,ShellRect row)
++        {
++            var c=d.Canvas;
++            if(n==0){c.Button("Max Assist version · "+active.Version,new ShellRect(row.X,row.Y,row.Width,50),()=>Choices(d,"Max Assist version",new[]{"V1 · Original movement fix","V2 · Bounded refinement"},choice=>{ChangeMaxAssist(v=>v.Version=choice.StartsWith("V2")?MaxAssistVersion.V2:MaxAssistVersion.V1,d);ShowAssists("Max Assist");}));return;}
++            bool slider=n==2;double current=slider?active.SliderPower:active.RefinementPower;
++            c.Rect(row,BoshTheme.Surface,.925f);
++            c.ValueSlider(slider?"V2 slider refinement":"V2 target refinement",new ShellRect(row.X+12,row.Y+8,row.Width-24,50),0,2,.05,()=>current,v=>current=v,()=>ChangeMaxAssist(v=>{if(slider)v.SliderPower=current;else v.RefinementPower=current;},d,false),false);
++        }
+         internal static void ShowAssists(string assist="All",int page=0)
+         {
+             if(assist==MapleAssistRegistry.Name){ShowMapleAssist();return;}
+             var registry=AssistRegistry();var selected=registry.FirstOrDefault(g=>g.Key.Equals(assist,StringComparison.OrdinalIgnoreCase));
+             Page("Assists",selected==null?"One entry per implemented assist · your qualified settings stay intact":selected.Key+" · original controls and settings bindings",d=>{
+                 var c=d.Canvas;var r=d.Content;
+-                int count=selected==null?registry.Count+1:selected.Count();
++                bool max=selected?.Key=="Max Assist";var maxSettings=ApplicationServices.Accounts.MaxAssist;
++                int extra=max?(maxSettings.Version==MaxAssistVersion.V2?3:1):0;
++                int count=selected==null?registry.Count+1:selected.Count()+extra;
+                 if(selected==null){
+                     c.Text("Choose an assist to see its status and configuration.",14,r.X,r.Y,r.Width,BoshTheme.Muted);
+                     ScrollList(d,new ShellRect(r.X,r.Y+48,r.Width,r.Height-88),count,64,(n,row)=>{if(n==1){var maple=ApplicationServices.Accounts.Maple;c.Button(MapleAssistRegistry.Name+" · "+(maple.Enabled?"On":"Off")+" · "+maple.VersionName,new ShellRect(row.X,row.Y,row.Width,50),()=>Child(d,ShowMapleAssist));return;}var group=registry[n>1?n-1:n];var toggle=group.OfType<OptionCheckbox>().FirstOrDefault();string status=group.Key=="Max Assist"?(CursorAssistOwnership.MaxEnabled?"On":"Off"):toggle==null?group.Count()+" controls":toggle.Checkbox.Checked?"On":"Off";
+                         c.Button(group.Key+"  ·  "+status,new ShellRect(row.X,row.Y,row.Width,50),()=>Child(d,()=>ShowAssists(group.Key)));});
+                 }else{
+-                    c.Text(selected.Key=="Max Assist"?"Strong cursor assistance using your qualified personal model.":"Changes apply to the existing gameplay configuration.",14,r.X,r.Y,r.Width,BoshTheme.Muted,false,.95f,40);
+-                    var controls=selected.ToList();ScrollList(d,new ShellRect(r.X,r.Y+48,r.Width,r.Height-88),count,74,(n,row)=>DrawOption(d,controls[n],row));
++                    c.Text(max?"V1 keeps the movement fix. V2 adds close-target and slider refinement; both keep the strong qualified planner.":"Changes apply to the existing gameplay configuration.",14,r.X,r.Y,r.Width,BoshTheme.Muted,false,.95f,40);
++                    var controls=selected.ToList();ScrollList(d,new ShellRect(r.X,r.Y+48,r.Width,r.Height-88),count,74,(n,row)=>{if(n<extra)DrawMaxAssistVersion(d,maxSettings,n,row);else DrawOption(d,controls[n-extra],row);});
+                 }
+                 var back=d.BackAction;d.Reopen=()=>WithParent(back,()=>ShowAssists(assist));
+-                c.Text((selected==null?count+" assists":selected.Count()+" controls")+" · scroll or drag the bar",12,r.X,r.Bottom-27,r.Width,BoshTheme.Muted);
++                c.Text((selected==null?count+" assists":count+" controls")+" · scroll or drag the bar",12,r.X,r.Bottom-27,r.Width,BoshTheme.Muted);
+             });
+         }
+     }
+--- a/stable-remastered/application/Shell/ShellQualification.cs
++++ b/stable-remastered/application/Shell/ShellQualification.cs
+@@ -30,7 +30,7 @@
+             if(flags.ContainsKey("v12MapLabSets")&&flags["v12MapLabSets"]){runner.navigationOnly=true;runner.PrepareMapLabSets();return runner;}
+             if(flags.ContainsKey("v12StartupProbe")&&flags["v12StartupProbe"]){runner.navigationOnly=true;runner.PrepareStartup(flags.ContainsKey("fresh")&&flags["fresh"]);return runner;}
+             if(flags.ContainsKey("v12MenuOnly")&&flags["v12MenuOnly"]){runner.navigationOnly=true;runner.PrepareV12();return runner;}
+-            if(flags.ContainsKey("v12Navigation")&&flags["v12Navigation"]){runner.navigationOnly=true;runner.PrepareV12();runner.PrepareNavigation();runner.PrepareMapleSliders();runner.PrepareIndependentSliders();runner.PreparePPPackages();return runner;}
++            if(flags.ContainsKey("v12Navigation")&&flags["v12Navigation"]){runner.navigationOnly=true;runner.PrepareV12();runner.PrepareNavigation();runner.PrepareMapleSliders();runner.PrepareIndependentSliders();runner.PrepareMaxVersions();runner.PreparePPPackages();return runner;}
+             if(flags.ContainsKey("v11PPOnly")&&flags["v11PPOnly"]){runner.navigationOnly=true;runner.PrepareMapleSliders();runner.PrepareIndependentSliders();runner.PreparePPPackages();return runner;}
+             if(flags.ContainsKey("v11SlidersOnly")&&flags["v11SlidersOnly"]){runner.navigationOnly=true;runner.PrepareMapleSliders();return runner;}
+             if(flags.ContainsKey("v11Only")&&flags["v11Only"]){runner.navigationOnly=true;runner.PrepareV11();return runner;}
+@@ -261,6 +261,19 @@
+             navigationSteps.Enqueue(()=>Dialog().Canvas.Buttons.First(b=>b.Label.Text=="Off").Invoke());
+             navigationSteps.Enqueue(()=>CheckNavigation(CursorAssistOwnership.MaxEnabled&&!ApplicationServices.Accounts.Maple.Enabled,"Max Assist excludes Maple"));
+             navigationSteps.Enqueue(()=>Dialog().HandleKey(Microsoft.Xna.Framework.Input.Keys.Escape));
++        }
++        void PrepareMaxVersions()
++        {
++            foreach(var size in new[]{new[]{1280,720},new[]{1024,768},new[]{1600,900}}){int width=size[0],height=size[1];
++                navigationSteps.Enqueue(()=>{GameBase.ActiveDialog?.Close();GameBase.SetScreenSize(width,height,true,true);ApplicationServices.Accounts.SetMaxAssist(new StableRemastered.Gameplay.MaxAssistOptions());ShellPresentation.WithParent(null,()=>ShellPresentation.ShowAssists("Max Assist"));});
++                navigationSteps.Enqueue(()=>{CheckNavigation(GameplaySettingsMapper.Capture().MaxAssist.Version==StableRemastered.Gameplay.MaxAssistVersion.V1,"Original Max remains V1");ClickNavigation("Max Assist version · V1");});
++                navigationSteps.Enqueue(()=>ClickNavigation("V2 · Bounded refinement"));
++                navigationSteps.Enqueue(()=>{var d=Dialog();CheckNavigation(d.Canvas.Buttons.Any(b=>b.Label.Text=="Max Assist version · V2"),"V2 selection returns to Max settings");CheckNavigation(GameplaySettingsMapper.Capture().MaxAssist.Version==StableRemastered.Gameplay.MaxAssistVersion.V2,"V2 selection reaches gameplay context");d.Canvas.Buttons.First(b=>b.Key!=null).Key(Microsoft.Xna.Framework.Input.Keys.Home);});
++                navigationSteps.Enqueue(()=>{CheckNavigation(ApplicationServices.Accounts.MaxAssist.RefinementPower==0,"V2 refinement slider reaches zero");Dialog().Canvas.Buttons.First(b=>b.Key!=null).Key(Microsoft.Xna.Framework.Input.Keys.End);Dialog().Canvas.Buttons.Where(b=>b.Key!=null).ElementAt(1).Key(Microsoft.Xna.Framework.Input.Keys.Home);});
++                navigationSteps.Enqueue(()=>{var settings=GameplaySettingsMapper.Capture().MaxAssist;CheckNavigation(settings.RefinementPower==2&&settings.SliderPower==0,"V2 numeric sliders are independent");Dialog().Canvas.Buttons.Where(b=>b.Key!=null).ElementAt(1).Key(Microsoft.Xna.Framework.Input.Keys.End);ScreenshotV102("max-v2-"+width+"x"+height);ClickNavigation("Max Assist version · V2");});
++                navigationSteps.Enqueue(()=>ClickNavigation("V1 · Original movement fix"));
++                navigationSteps.Enqueue(()=>{CheckNavigation(ApplicationServices.Accounts.MaxAssist.Version==StableRemastered.Gameplay.MaxAssistVersion.V1&&ApplicationServices.Accounts.MaxAssist.SliderPower==2,"V1 return preserves V2 tuning");Dialog().Close();});
++            }
+         }
+         void PreparePPPackages()
+         {
+--- a/stable-remastered/application/Shell/ShellWork.cs
++++ b/stable-remastered/application/Shell/ShellWork.cs
+@@ -11,6 +11,11 @@
+         static readonly object gate=new object();
+         static readonly CancellationTokenSource shutdown=new CancellationTokenSource();
+         static readonly System.Collections.Generic.HashSet<Task> tasks=new System.Collections.Generic.HashSet<Task>();
++        static TaskCompletionSource<bool> changed=NewSignal();
++        static TaskCompletionSource<bool> NewSignal()=>new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
++        static ShellWork(){osu.GameBase.OnModeChange+=StateChanged;ShellPreferences.Changed+=StateChanged;}
++        static void Pulse(){if(queued==0)return;var previous=changed;changed=NewSignal();previous.TrySetResult(true);}
++        static void StateChanged(){lock(gate)Pulse();}
+         static int active,queued;
+         internal static int Active=>Volatile.Read(ref active);
+         internal static int Queued=>Volatile.Read(ref queued);
+@@ -20,10 +25,23 @@
+             var linked=CancellationTokenSource.CreateLinkedTokenSource(token,shutdown.Token);var task=Task.Run(async()=>{
+                 bool entered=false,counted=true;
+                 try {
+-                    while(true){linked.Token.ThrowIfCancellationRequested();lock(gate){if(osu.GameBase.Mode!=osu.OsuModes.Play && active<ShellPreferences.Current.EffectiveBackgroundWorkers(Environment.ProcessorCount)){entered=true;active++;}}if(entered)break;await Task.Delay(20,linked.Token).ConfigureAwait(false);}
+-                    lock(gate){queued--;counted=false;}
+-                    return work(linked.Token);
+-                }finally{lock(gate){if(counted)queued--;if(entered)active--;}}
++                    var cancelled=NewSignal();
++                    using(linked.Token.Register(()=>cancelled.TrySetCanceled())){
++                        while(true){
++                            Task signal;
++                            lock(gate){
++                                linked.Token.ThrowIfCancellationRequested();
++                                if(osu.GameBase.Mode!=osu.OsuModes.Play && active<ShellPreferences.Current.EffectiveBackgroundWorkers(Environment.ProcessorCount)){entered=true;active++;queued--;counted=false;break;}
++                                signal=changed.Task;
++                            }
++                            // Blocked artwork has no polling timer during gameplay.
++                            // Subscribe under the same lock as the admission check,
++                            // so mode/capacity changes cannot be lost between them.
++                            await Task.WhenAny(signal,cancelled.Task).ConfigureAwait(false);
++                        }
++                        return work(linked.Token);
++                    }
++                }finally{lock(gate){if(counted)queued--;if(entered)active--;Pulse();}}
+             },CancellationToken.None);tasks.Add(task);task.ContinueWith(done=>{lock(gate)tasks.Remove(done);linked.Dispose();},TaskScheduler.Default);return task;}
+         }
+         internal static void Shutdown(){Task[] pending;lock(gate){shutdown.Cancel();pending=System.Linq.Enumerable.ToArray(tasks);}try{if(!Task.WaitAll(pending,5000))throw new TimeoutException("Interface workers did not finish within the shutdown budget.");}catch(AggregateException errors){var failures=System.Linq.Enumerable.Where(errors.Flatten().InnerExceptions,e=>!(e is OperationCanceledException)).ToArray();if(failures.Length!=0)throw new AggregateException(failures);}}
+--- a/stable-remastered/application/V01Qualification.cs
++++ b/stable-remastered/application/V01Qualification.cs
+@@ -92,6 +92,7 @@
+         maplePatternProbe=marker.Value<bool>("maplePatternProbe");
+         v12AssistProbe=marker.Value<bool>("v12AssistProbe");v12QuietProbe=marker.Value<bool>("v12QuietProbe");
+         v12ModeOffset=marker.Value<int>("v12ModeOffset");v12MapVersion=marker.Value<string>("v12MapVersion");
++        v14MaxV2Probe=marker.Value<bool>("v14MaxV2Probe");
+         if(displayRates!=null && (displayRates.Length==0 || displayRates.Any(f=>f!=-1&&f!=0&&(f<30||f>10000))))throw new InvalidDataException("Invalid display-rate qualification matrix.");
+         stabilization=new DirectoryInfo(root).Name=="stabilization-46" || new DirectoryInfo(root).Name=="stabilization-47" || (new DirectoryInfo(root).Name=="stabilization-48" || new DirectoryInfo(root).Name=="stabilization-49");
+         corrective=new DirectoryInfo(root).Name=="v021-qualification-44" || new DirectoryInfo(root).Name=="pp-qualification-45" || stabilization;skipProbe=marker.Value<bool>("skipProbe");
+--- a/stable-remastered/application/V12AssistQualification.cs
++++ b/stable-remastered/application/V12AssistQualification.cs
+@@ -12,7 +12,7 @@
+         [System.Runtime.InteropServices.DllImport("user32.dll")]
+         static extern IntPtr GetForegroundWindow();
+         static bool V13OwnsForeground()=>GetForegroundWindow()==osu.GameBase.Form.Handle;
+-        bool v12AssistProbe,v12QuietProbe;int v12ModeOffset;string v12MapVersion;int v12HeldKey,v12Head=-1;ulong v12Epoch;int[] v12Heads;
++        bool v12AssistProbe,v12QuietProbe,v14MaxV2Probe;int v12ModeOffset;string v12MapVersion;int v12HeldKey,v12Head=-1;ulong v12Epoch;int[] v12Heads;
+         void V12Configure(GameplaySettings settings,StableGameplayContext ctx)
+         {
+             if(v12QuietProbe)settings.RecordDiagnostics=false;
+@@ -21,6 +21,7 @@
+             settings.AimCorrection=mode==6||mode==7||mode==10||mode==11;
+             settings.Relax=mode==1||mode==3||mode==5||mode==7||mode==8||mode==10||mode==11;
+             settings.SliderTracking=settings.MaxAssistAutomaticSliders=true;settings.AimRadius=settings.RelaxAimRadius=150;
++            if(v14MaxV2Probe){settings.MaxAssistEnabled=true;settings.MaxAssist=new MaxAssistOptions{Version=MaxAssistVersion.V2};settings.Maple.Enabled=false;settings.AimCorrection=(cycle%4)>=2;settings.Relax=(cycle%2)==1;}
+             settings.RawInput=settings.AbsoluteToWindow=true;settings.Rate=1;ctx.ModBits=1;
+             bool objects=false;var times=new List<int>();foreach(string line in File.ReadLines(ctx.Beatmap.AbsolutePath)){if(line.Trim()=="[HitObjects]"){objects=true;continue;}if(!objects||line.Length==0||line[0]=='/'||line[0]=='[')continue;var values=line.Split(',');int time;if(values.Length>=5&&int.TryParse(values[2],out time))times.Add(time);}
+             v12Heads=times.ToArray();v12Head=-1;v12Epoch=0;v12HeldKey=0;
+--- a/stable-remastered/contracts/AccountModels.cs
++++ b/stable-remastered/contracts/AccountModels.cs
+@@ -110,6 +110,7 @@
+         public System.Collections.Generic.List<CosmeticLoadout> CosmeticLoadouts {get;set;}=new System.Collections.Generic.List<CosmeticLoadout>();
+         public Dictionary<OfflineEnvironment,StableRemastered.Performance.PPProviderSelection> PPSystems {get;set;}=new Dictionary<OfflineEnvironment,StableRemastered.Performance.PPProviderSelection>();
+         public MapleSettings Maple {get;set;}=new MapleSettings();
++        public MaxAssistOptions MaxAssist {get;set;}=new MaxAssistOptions();
+     }
+     public sealed class AccountStatsModel
+     {
+--- a/stable-remastered/contracts/ClientUpdatePackage.cs
++++ b/stable-remastered/contracts/ClientUpdatePackage.cs
+@@ -16,7 +16,7 @@
+     }
+     public static class ClientRelease
+     {
+-        public const string Repository="hsob2nd/Boshsu",Tag="v1.4.0-rc.1";
++        public const string Repository="hsob2nd/Boshsu",Tag="v1.4.0-rc.2";
+         static readonly Regex Version=new Regex(@"^v?(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$",RegexOptions.CultureInvariant);
+         public static int Compare(string a,string b)
+         {
+--- a/stable-remastered/contracts/IGameplayEngine.cs
++++ b/stable-remastered/contracts/IGameplayEngine.cs
+@@ -38,6 +38,7 @@
+         public double RotationDegrees { get; set; }
+         public double AssistIntensity { get; set; }
+         public bool MaxAssistEnabled { get; set; }
++        public MaxAssistOptions MaxAssist {get;set;}=new MaxAssistOptions();
+         public MapleSettings Maple {get;set;}=new MapleSettings();
+         public double InputIntent { get; set; } = 1;
+         public double GoldenStyle { get; set; } = 1;
+@@ -85,6 +86,7 @@
+         public bool HiddenFirstApproach {get;set;}=true;
+         public void Validate()
+         {
++            if(MaxAssist==null)MaxAssist=new MaxAssistOptions();MaxAssist.Validate();
+             if(Maple==null)Maple=new MapleSettings();Maple.Validate();
+             Range(Rate, 0.05, 4, nameof(Rate));
+             Range(CircleSize, 3, 12, nameof(CircleSize));
+--- /dev/null
++++ b/stable-remastered/contracts/MaxAssistOptions.cs
+@@ -0,0 +1,22 @@
++using System;
++namespace StableRemastered.Gameplay
++{
++    public enum MaxAssistVersion { V1, V2 }
++    // Profile selection is separate from the qualified planner's settings.
++    // Missing historical selections always remain V1.
++    public sealed class MaxAssistOptions
++    {
++        public MaxAssistVersion Version {get;set;}
++        public double RefinementPower {get;set;}=2;
++        public double SliderPower {get;set;}=2;
++        public void Validate()
++        {
++            if(!Enum.IsDefined(typeof(MaxAssistVersion),Version))throw new ArgumentException("Unknown Max Assist version.");
++            Range(RefinementPower,nameof(RefinementPower));Range(SliderPower,nameof(SliderPower));
++        }
++        static void Range(double value,string name)
++        {
++            if(double.IsNaN(value)||double.IsInfinity(value)||value<0||value>2)throw new ArgumentOutOfRangeException(name,"Use a value from 0 to 2.");
++        }
++    }
++}
+--- a/stable-remastered/engine/BackendApp.cpp
++++ b/stable-remastered/engine/BackendApp.cpp
+@@ -356,6 +356,12 @@
+         setting("ultimate_personal_slider_hp_protection",s.value("SliderHealth",false));
+         setting("ultimate_personal_spinner_hp_protection",s.value("SpinnerHealth",false));
+         setting("ultimate_personal_maxassist",s.value("MaxAssistEnabled",false));
++        const auto max=s.value("MaxAssist",Json::object());
++        const int maxVersion=max.value("Version",0);const double maxPower=max.value("RefinementPower",2.0),maxSliderPower=max.value("SliderPower",2.0);
++        if((maxVersion!=0&&maxVersion!=1)||!std::isfinite(maxPower)||maxPower<0||maxPower>2||!std::isfinite(maxSliderPower)||maxSliderPower<0||maxSliderPower>2)throw std::runtime_error("Invalid Max Assist version or refinement power.");
++        setting("ultimate_personal_maxassist_version",maxVersion);
++        setting("ultimate_personal_maxassist_refinement",maxPower);
++        setting("ultimate_personal_maxassist_slider_power",maxSliderPower);
+         const auto maple=s.value("Maple",Json::object());ultimate::personal::MapleSettings mapleValues;
+         mapleValues.enabled=maple.value("Enabled",false);mapleValues.version=maple.value("Version",0);
+ #define BOSH_MAPLE_VALIDATE(field,json,initial,maximum) mapleValues.field=maple.value(#json,double(initial));
+--- a/stable-remastered/engine/mcosu/ultimate/personal/Diagnostics.cpp
++++ b/stable-remastered/engine/mcosu/ultimate/personal/Diagnostics.cpp
+@@ -88,7 +88,7 @@
+                 std::ostringstream row;row<<std::setprecision(17)<<"{\"schema\":\"ultimate-run-v1\",\"session\":"<<session_<<",\"run\":"<<r.run<<",\"reason\":\""<<names[std::min(7u,unsigned(r.reason))]<<"\",\"unixMilliseconds\":"<<r.unixMilliseconds<<",\"mapMilliseconds\":"<<r.mapMilliseconds<<",\"mapHash\":\""<<escaped(r.hash.data())<<"\",\"title\":\""<<escaped(r.title.data())<<"\",\"settings\":{";
+                 const char* keys[]={"rate","readingAR","followpointDT","rotation","flip","disableNotelock","ac","acRadius","acRxRadius","relax","sliderTracking","hpProtection","maxAssist","intensity","goldenStyle","pathDirectness","endpointPrecision","timingPriority","inputIntent","nativeMods","replay","recording","maxAutomaticSliders"};
+                 for(std::size_t i=0;i<r.settings.size();i++){if(i)row<<',';row<<'"'<<keys[i]<<"\":"<<(std::isfinite(r.settings[i])?r.settings[i]:0);}
+-                row<<"},\"maple\":{\"enabled\":"<<(r.mapleEnabled?"true":"false")<<",\"version\":\""<<MapleAssist::versionName(r.mapleVersion)<<"\",\"implementation\":\"native-map-clock-3\",\"parameters\":{";
++                row<<"},\"maxAssistOptions\":{\"version\":"<<r.maxVersion<<",\"refinementPower\":"<<r.maxRefinement<<",\"sliderPower\":"<<r.maxSliderPower<<"},\"maple\":{\"enabled\":"<<(r.mapleEnabled?"true":"false")<<",\"version\":\""<<MapleAssist::versionName(r.mapleVersion)<<"\",\"implementation\":\"native-map-clock-3\",\"parameters\":{";
+                 bool mapleComma=false;
+ #define BOSH_DIAGNOSTIC_NUMBER(field,json,value,maximum) if(mapleComma)row<<',';mapleComma=true;row<<"\"" #json "\":"<<r.mapleSettings.field;
+                 BOSH_MAPLE_NUMBERS(BOSH_DIAGNOSTIC_NUMBER)
+--- a/stable-remastered/engine/mcosu/ultimate/personal/Diagnostics.h
++++ b/stable-remastered/engine/mcosu/ultimate/personal/Diagnostics.h
+@@ -40,6 +40,7 @@
+     double accuracy=0;bool passed=false,partial=false;
+     bool mapleEnabled=false;int mapleVersion=-1;
+     MapleSettings mapleSettings;
++    int maxVersion=0;double maxRefinement=2,maxSliderPower=2;
+ };
+ // One gameplay producer, one writer. Disabled construction creates no thread or
+ // file. Fixed storage; no event allocations, serialization or disk I/O in sample.
+--- /dev/null
++++ b/stable-remastered/engine/mcosu/ultimate/personal/MaxAssistV2.h
+@@ -0,0 +1,83 @@
++// Boshsu Max V2 refinement around the unchanged qualified planner. GPL-3.0-or-later.
++#pragma once
++#include "MaxMovementBudget.h"
++#include "MaxCursorAuthority.h"
++namespace ultimate { namespace personal {
++class MaxAssistV2 {
++public:
++    void reset(){budget_.reset();owner_=0;lastMap_=std::numeric_limits<std::int64_t>::min();target_=NoObject;body_=false;fine_=lastRaw_=lastPlanned_=Point();}
++    Point process(const Frame& f,Point planned,double intensity,const Settings& ac,
++                  const Objects& objects,std::size_t target,double approach,double power,double sliderPower) {
++        const auto geometry=AssistTargetGeometry::resolve(f,ac);
++        if(!f.active||!f.assistAllowed||!f.owner||!finite(f.input)||!finite(planned)||!geometry.valid||
++           !std::isfinite(intensity)||intensity<=0||intensity>.5||!validPower(power)||!validPower(sliderPower)||
++           !std::isfinite(approach)||approach<=0||target>=objects.size()||
++           !MaxCursorAuthority::relevant(objects.at(target),f,approach)){reset();return f.input;}
++        const Object current=objects.at(target);
++        const bool currentBody=current.kind==Kind::Slider&&current.headHandled&&f.map>=current.start&&f.map<=current.end;
++        if(owner_!=f.owner||lastMap_==std::numeric_limits<std::int64_t>::min()||f.map<lastMap_||
++           double(f.map)-double(lastMap_)>512||intensity_!=intensity||power_!=power||sliderPower_!=sliderPower||
++           radius_!=geometry.validRadius) {
++            reset();owner_=f.owner;lastMap_=f.map;lastRaw_=f.input;lastPlanned_=planned;target_=target;body_=currentBody;
++            intensity_=intensity;power_=power;sliderPower_=sliderPower;radius_=geometry.validRadius;
++            return budget_.process(f,planned,intensity);
++        }
++        // Max remains the only target owner. Never run another target selector
++        // or retain the previous target's fine offset after a handoff.
++        // Do not interpolate between two different objects (or a slider head
++        // and its body): that would introduce a callback-sized stale-target lag.
++        if(target_!=target||body_!=currentBody){fine_=Point();target_=target;body_=currentBody;lastPlanned_=planned;}
++        const auto elapsed=f.map-lastMap_;
++        if(elapsed==0)return budget_.process(f,planned,intensity);
++        const double strength=(power>1?.7+(power-1)*.15:power*.7)*(intensity/.5);
++        Point out=f.input;
++        for(std::int64_t ms=1;ms<=elapsed;ms++){
++            Frame sample=f;sample.map=lastMap_+ms;
++            sample.input=mix(lastRaw_,f.input,double(ms)/elapsed);
++            const Point before=mix(lastRaw_,f.input,double(ms-1)/elapsed);
++            const double moving=length(sub(sample.input,before));
++            const Point coarse=mix(lastPlanned_,planned,double(ms)/elapsed);
++            const Object object=objects.atTime(target,sample.map);
++            const bool body=object.kind==Kind::Slider&&object.headHandled&&sample.map>=object.start&&sample.map<=object.end;
++            const Point aim=body?object.path:object.head;
++            const double fov=std::max(1.2,4*strength)*geometry.validRadius;
++            if(!finite(aim)){reset();return f.input;}
++            // A sub-nanounit tolerance keeps interpolated observations on the
++            // exact FOV edge from engaging a different millisecond by rounding.
++            if(power==0||moving<.001||object.kind==Kind::Spinner||distance2(sample.input,aim)>fov*fov+1e-9){
++                fine_=mul(fine_,1-.6*std::min(1.,strength));
++                if(power==0||length(fine_)<1e-9)fine_=Point();
++            }else{
++                const Point difference=sub(aim,add(coarse,fine_));const double distance=length(difference);
++                double gain=strength;
++                if(body){gain*=sliderPower;if(distance<geometry.validRadius*.35)gain*=distance/std::max(1e-9,geometry.validRadius*.35);}
++                if(distance>1e-9){
++                    const double correction=std::min(distance,(distance<=geometry.validRadius?.65:1)*gain*std::min(distance,moving));
++                    fine_=add(fine_,mul(difference,correction/distance));
++                    // Bound only the additional refinement, never Max's strong
++                    // planned guidance. A radial cap avoids diagonal gain.
++                    const double cap=power*16,amount=length(fine_);
++                    if(amount>cap)fine_=mul(fine_,cap/amount);
++                }
++            }
++            // One physical movement budget for the complete publication:
++            // coarse guidance and refinement cannot double-spend raw motion.
++            out=budget_.process(sample,add(coarse,fine_),intensity);
++        }
++        lastMap_=f.map;lastRaw_=f.input;lastPlanned_=planned;
++        if(!finite(out)){reset();return f.input;}return out;
++    }
++private:
++    MaxMovementBudget budget_;
++    std::uintptr_t owner_=0;std::int64_t lastMap_=std::numeric_limits<std::int64_t>::min();
++    std::size_t target_=NoObject;Point fine_,lastRaw_,lastPlanned_;
++    bool body_=false;
++    double intensity_=-1,power_=-1,sliderPower_=-1,radius_=-1;
++    static bool validPower(double p){return std::isfinite(p)&&p>=0&&p<=2;}
++    static Point add(Point a,Point b){return Point(a.x+b.x,a.y+b.y);}
++    static Point sub(Point a,Point b){return Point(a.x-b.x,a.y-b.y);}
++    static Point mul(Point a,double b){return Point(a.x*b,a.y*b);}
++    static Point mix(Point a,Point b,double t){return add(a,mul(sub(b,a),t));}
++    static double length(Point p){return std::sqrt(distance2(p,Point()));}
++};
++}}
+--- /dev/null
++++ b/stable-remastered/engine/mcosu/ultimate/personal/MaxMovementBudget.h
+@@ -0,0 +1,46 @@
++// GPL-3.0-or-later. Maple V1's physical-movement budget around the Max model.
++#pragma once
++#include "InputCoordinator.h"
++namespace ultimate { namespace personal {
++class MaxMovementBudget {
++public:
++    void reset(){owner_=0;lastMap_=std::numeric_limits<std::int64_t>::min();lastRaw_=offset_=Point();intensity_=-1;}
++    Point process(const Frame& f,Point proposed,double intensity) {
++        if(!f.active||!f.assistAllowed||!f.owner||!finite(f.input)||!finite(proposed)||
++           !std::isfinite(intensity)||intensity<=0||intensity>.5){reset();return f.input;}
++        if(owner_!=f.owner||intensity_!=intensity||lastMap_==std::numeric_limits<std::int64_t>::min()||
++           f.map<lastMap_||double(f.map)-double(lastMap_)>512){
++            reset();owner_=f.owner;lastMap_=f.map;lastRaw_=f.input;intensity_=intensity;return f.input;
++        }
++        const auto elapsed=f.map-lastMap_;
++        // Repeated render polls must not buy more guidance. Preserve physical
++        // displacement until map time advances; raw input itself stays live.
++        if(elapsed==0)return Point(f.input.x+offset_.x,f.input.y+offset_.y);
++        const Point motion(f.input.x-lastRaw_.x,f.input.y-lastRaw_.y);
++        const double moving=std::sqrt(motion.x*motion.x+motion.y*motion.y);
++        // Max's existing .50 ceiling is its full-strength setting. Match V1's
++        // 0..1 physical budget without changing that model setting or output.
++        const double strength=intensity/.5;
++        if(moving/double(elapsed)<.001){
++            const double release=std::pow(1-.3*strength,double(elapsed));
++            offset_=Point(offset_.x*release,offset_.y*release);
++            if(distance2(offset_,Point())<1e-18)offset_=Point();
++        }else{
++            const Point desired(proposed.x-f.input.x,proposed.y-f.input.y);
++            const Point correction(desired.x-offset_.x,desired.y-offset_.y);
++            const double amount=std::sqrt(correction.x*correction.x+correction.y*correction.y);
++            const double budget=moving*strength;
++            // The same additional-offset cap used by Maple V1: tiny physical
++            // motion cannot turn into an arbitrary target-sized correction.
++            if(amount>1e-12){const double scale=std::min(1.,budget/amount);offset_=Point(offset_.x+correction.x*scale,offset_.y+correction.y*scale);}
++        }
++        lastMap_=f.map;lastRaw_=f.input;
++        const Point out(f.input.x+offset_.x,f.input.y+offset_.y);
++        if(!finite(out)){reset();return f.input;}return out;
++    }
++private:
++    std::uintptr_t owner_=0;
++    std::int64_t lastMap_=std::numeric_limits<std::int64_t>::min();
++    Point lastRaw_,offset_;double intensity_=-1;
++};
++}}
+--- a/stable-remastered/engine/mcosu/ultimate/personal/NativeInput.cpp
++++ b/stable-remastered/engine/mcosu/ultimate/personal/NativeInput.cpp
+@@ -39,6 +39,9 @@
+ ConVar sliderProtection("ultimate_personal_slider_hp_protection",true,FCVAR_NONE,"Application-owned slider HP protection preference.");
+ ConVar spinnerProtection("ultimate_personal_spinner_hp_protection",true,FCVAR_NONE,"Application-owned spinner HP protection preference.");
+ ConVar maxEnabled("ultimate_personal_maxassist",false,FCVAR_NONE,"Personal Golden movement assistance.");
++ConVar maxVersion("ultimate_personal_maxassist_version",0.0f,FCVAR_NONE,"Max Assist V1 (0) or V2 (1); one cursor owner.");
++ConVar maxRefinement("ultimate_personal_maxassist_refinement",2.0f,FCVAR_NONE,"V2 bounded close-target refinement (0..2).");
++ConVar maxSliderPower("ultimate_personal_maxassist_slider_power",2.0f,FCVAR_NONE,"V2 guided slider refinement (0..2); automatic slider ownership stays separate.");
+ ConVar intensity("ultimate_personal_intensity",.5f,FCVAR_NONE,"Movement assistance intensity (0..0.50).");
+ ConVar goldenStyle("ultimate_personal_golden_style",1.0f,FCVAR_NONE,"Personal Golden style.");
+ ConVar directness("ultimate_personal_path_directness",0.0f,FCVAR_NONE,"Trajectory path directness.");
+@@ -212,6 +215,7 @@
+     const std::string title=std::string(d->getArtist().toUtf8())+" - "+d->getTitle().toUtf8()+" ["+d->getDifficultyName().toUtf8()+"]";std::size_t titleBytes=std::min(title.size(),r.title.size()-1);while(titleBytes<title.size()&&titleBytes>0&&(static_cast<unsigned char>(title[titleBytes])&0xc0)==0x80)--titleBytes;std::memcpy(r.title.data(),title.data(),titleBytes);
+     auto score=osu_->getScore();r.score=score->getScore();r.accuracy=score->getAccuracy();r.combo=score->getCombo();r.maxCombo=score->getComboMax();r.n300=score->getNum300s();r.n100=score->getNum100s();r.n50=score->getNum50s();r.misses=score->getNumMisses();r.geki=score->getNum300gs();r.katu=score->getNum100ks();r.mods=score->getModsLegacy();r.mode=d->getGameMode();r.passed=reason==RunEndReason::Completed&&!score->hasDied();r.partial=reason!=RunEndReason::Completed;
+     r.mapleEnabled=mapleSettings_.enabled;r.mapleVersion=mapleSettings_.version;r.mapleSettings=mapleSettings_;
++    r.maxVersion=maxVersion.getInt();r.maxRefinement=maxRefinement.getFloat();r.maxSliderPower=maxSliderPower.getFloat();
+     auto value=[](const char* name){auto c=convar->getConVarByName(name,false);return c?double(c->getFloat()):0.;};
+     r.settings={{osu_->getSpeedMultiplier(),gameplay::readingAR.getFloat(),gameplay::followpointDT.getFloat(),value("osu_playfield_rotation"),gameplay::mapFlip.getFloat(),gameplay::disableNotelock.getFloat(),ac.getFloat(),acRadius.getFloat(),acRxRadius.getFloat(),rx.getFloat(),tracking.getFloat(),hpProtection.getFloat(),maxEnabled.getFloat(),intensity.getFloat(),goldenStyle.getFloat(),directness.getFloat(),precision.getFloat(),timingPriority.getFloat(),intent.getFloat(),double(r.mods),osu_->isLocalReplay()?1.:0.,recording.getFloat(),maxAutomaticSliders.getFloat()}};
+     diagnostics_.lifecycle(r);
+@@ -219,7 +223,7 @@
+ void NativeInput::ending(OsuBeatmap* map,unsigned reason){stop(Reason::Inactive);if(metadataActive_){metadata(map,RunEndReason(std::min(5u,reason)));diagnostics_.endRun(metadataRun_);metadataActive_=false;}}
+ void NativeInput::started(OsuBeatmap* base){
+     if(metadataActive_)ending(base,4);
+-    mapleSettings_=readMapleSettings();maple_.reset();maxAuthority_.reset();activityGate_.reset();cursorOwner_=0;
++    mapleSettings_=readMapleSettings();maple_.reset();maxAuthority_.reset();maxMovement_.reset();maxV2_.reset();activityGate_.reset();cursorOwner_=0;
+     auto map=dynamic_cast<OsuBeatmapStandard*>(base);
+     if(map && map->getSelectedDifficulty2() && !osu_->isLocalReplay()) {
+         // Establish the run and prefix index before the first active gameplay transaction.
+@@ -246,7 +250,7 @@
+         event.candidateDistance=event.finalDistance=0;event.relaxTimingError=0;event.merged=event.physical;event.grade=-1;event.timingError=0;event.sliderOwner=0;event.sliderTarget=-1;event.maxCursorOwned=false;event.maxAuthorityReason=unsigned(MaxAuthorityReason::Inactive);event.activityReason=0;event.activityIdleMilliseconds=0;
+         diagnostics_.sample(event);
+     }
+-    coordinator_.reset();model_.reset();maple_.reset();maxAuthority_.reset();activityGate_.reset();cursorOwner_=0;lastHeld_=0;frameObserved_=false;
++    coordinator_.reset();model_.reset();maple_.reset();maxAuthority_.reset();maxMovement_.reset();maxV2_.reset();activityGate_.reset();cursorOwner_=0;lastHeld_=0;frameObserved_=false;
+     if(runActive_)diagnostics_.flushSamples();
+     runActive_=false;
+ }
+@@ -272,7 +276,7 @@
+     const std::string& hash=map->getSelectedDifficulty2()->getMD5Hash();
+     const bool changed=lastMap_!=map || lastObjects_!=map->getHitObjectsPointer().data() || prefixEnd_.size()!=map->getHitObjectsPointer().size() || lastHash_!=hash;
+     if(changed || map->getCurMusicPosWithOffsets()<lastTime_) {
+-        maple_.reset();maxAuthority_.reset();activityGate_.reset();cursorOwner_=0;
++        maple_.reset();maxAuthority_.reset();maxMovement_.reset();maxV2_.reset();activityGate_.reset();cursorOwner_=0;
+         if(runActive_)diagnostics_.flushSamples();
+         run_++;lastMap_=map;lastObjects_=map->getHitObjectsPointer().data();lastHash_=hash;
+         if(changed) {
+@@ -288,12 +292,12 @@
+     Frame frame;frame.active=true;frame.owner=reinterpret_cast<std::uintptr_t>(map);frame.map=lastTime_;
+     frame.hitWindow50=OsuGameRules::getHitWindow50(map);frame.hitRadius=map->getRawHitcircleDiameter()/2.0;frame.input=raw;
+     const auto geometry=AssistTargetGeometry::resolve(frame,settings);NativeObjects objects(map,prefixEnd_);
+-    const int owner=mapleMovement?2:movement?1:0;
+-    if(owner!=cursorOwner_){model_.reset();maple_.reset();maxAuthority_.reset();cursorOwner_=owner;}
++    const int owner=mapleMovement?2:movement?(maxVersion.getInt()==1?3:1):0;
++    if(owner!=cursorOwner_){model_.reset();maple_.reset();maxAuthority_.reset();maxMovement_.reset();maxV2_.reset();cursorOwner_=owner;}
+     const Settings configuredSettings=settings;
+     const ActivityMode activityMode=mapleMovement?(mapleSettings_.version==0?ActivityMode::MapleV1:ActivityMode::MapleV3):movement?ActivityMode::MaxAssist:ActivityMode::None;
+     const auto activity=activityGate_.observe(activityMode,point(physicalDisplay),OsuGameRules::getPlayfieldScaleFactor(osu_),engine->getTimeReal()*1000.,engine->hasFocus());
+-    if(activity.resetAssist){model_.reset();maxAuthority_.reset();maple_.reset();coordinator_.reset();}
++    if(activity.resetAssist){model_.reset();maxAuthority_.reset();maxMovement_.reset();maxV2_.reset();maple_.reset();coordinator_.reset();}
+     AssistActivityGate::apply(activity,settings,sliderOwner);
+     const double approach=OsuGameRules::getApproachTime(map);
+     MaxAuthorityDecision authority;
+@@ -307,7 +311,7 @@
+         if(mapleResult.published){logical=Vector2(float(mapleResult.cursor.x),float(mapleResult.cursor.y));movementPublished=true;}
+     }else if(movement) {
+         authority=maxAuthority_.evaluate(frame,true,approach,objects);
+-        if(authority.resetModel)model_.reset();
++        if(authority.resetModel){model_.reset();maxMovement_.reset();maxV2_.reset();}
+         if(authority.allow&&initializeModel()) {
+         ModelFrame m;m.owner=run_;m.count=map->getHitObjectsPointer().size();m.mapMilliseconds=lastTime_;
+         m.realMilliseconds=engine->getTimeReal()*1000.0;m.rawX=logical.x;m.rawY=logical.y;
+@@ -322,9 +326,13 @@
+         stable_remastered::metricsBeginPhase(7);const bool ok=model_.process(m,result);stable_remastered::metricsEndPhase(7);
+         readMap=nullptr;readOwner=0;readThread=0;
+         if(ok && result.hasRequested) {
+-            if(MaxCursorAuthority::accepts(authority,frame,approach,objects,std::size_t(result.targetIndex))){logical=Vector2((float)result.blendedX,(float)result.blendedY);movementPublished=true;}
+-            else {model_.reset();maxAuthority_.reset();authority.reason=MaxAuthorityReason::StaleOutput;result=ModelOutput();result.requestedX=result.blendedX=raw.x;result.requestedY=result.blendedY=raw.y;}
+-        }
++            if(MaxCursorAuthority::accepts(authority,frame,approach,objects,std::size_t(result.targetIndex))){
++                const Point planned(result.blendedX,result.blendedY);
++                const Point guided=owner==3?maxV2_.process(frame,planned,m.intensity,settings,objects,std::size_t(result.targetIndex),approach,maxRefinement.getFloat(),maxSliderPower.getFloat()):maxMovement_.process(frame,planned,m.intensity);
++                logical=Vector2(float(guided.x),float(guided.y));movementPublished=distance2(guided,raw)>1e-18;
++            }
++            else {model_.reset();maxAuthority_.reset();maxMovement_.reset();maxV2_.reset();authority.reason=MaxAuthorityReason::StaleOutput;result=ModelOutput();result.requestedX=result.blendedX=raw.x;result.requestedY=result.blendedY=raw.y;}
++        }else {maxMovement_.reset();maxV2_.reset();}
+         }
+     }
+     frame.input=point(logical);
+--- a/stable-remastered/engine/mcosu/ultimate/personal/NativeInput.h
++++ b/stable-remastered/engine/mcosu/ultimate/personal/NativeInput.h
+@@ -6,6 +6,8 @@
+ #include "Diagnostics.h"
+ #include "MapleAssist.h"
+ #include "MaxCursorAuthority.h"
++#include "MaxMovementBudget.h"
++#include "MaxAssistV2.h"
+ #include "AssistActivityGate.h"
+ #include <vector>
+ #include <string>
+@@ -32,6 +34,8 @@
+     InputCoordinator coordinator_;
+     HostedModel model_;
+     MaxCursorAuthority maxAuthority_;
++    MaxMovementBudget maxMovement_;
++    MaxAssistV2 maxV2_;
+     AssistActivityGate activityGate_;
+     MapleAssist maple_;MapleSettings mapleSettings_;int cursorOwner_=0;
+     Diagnostics diagnostics_;
+--- a/stable-remastered/tests/AccountTests.cs
++++ b/stable-remastered/tests/AccountTests.cs
+@@ -182,6 +182,7 @@
+         OsrExchangeTests.Run(root);
+         KawataProviderTests.Run();
+         V11MapleSettingsTests.Run(root);
++        V14MaxSettingsTests.Run(root);
+         V11PPProviderTests.CompareBuiltIn(map,root);
+         V11AkatsukiTests.Run(root,map);
+         V11CCV3Tests.Run(root,map);
+--- /dev/null
++++ b/stable-remastered/tests/PublishedUpdateDiscoveryTests.cs
+@@ -0,0 +1,16 @@
++// Post-publication fixture. Read-only release JSON, no client launch/install.
++using System;using System.IO;using System.Reflection;using Newtonsoft.Json.Linq;
++class PublishedUpdateDiscoveryTests
++{
++    static int Main(string[] args){try{
++        var host=Assembly.LoadFrom(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"StableRemastered.exe"));
++        var type=host.GetType("StableRemastered.Application.Updates.GithubClientUpdates",true);
++        var method=type.GetMethod("SelectRelease",BindingFlags.Static|BindingFlags.NonPublic);
++        var list=JArray.Parse(File.ReadAllText(args[0]));var found=method.Invoke(null,new object[]{list,true});var t=found.GetType();
++        Func<string,string> field=n=>(string)t.GetField(n).GetValue(found);
++        string old=(string)host.GetType("StableRemastered.Updates.ClientRelease").GetField("Tag").GetRawConstantValue();
++        if(old!="v1.3.0-rc.1"||field("State")!="Available"||field("Tag")!="v1.4.0-rc.1"||field("Name")!="Boshsu-1.4-clean.zip"||field("Hash")!=args[1]||field("Url")!="https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.1/Boshsu-1.4-clean.zip")throw new Exception("Published update was not selected with the expected baseline, identity, origin and digest.");
++        File.WriteAllText(args[2],new JObject{{"Passed",true},{"Assertions",6},{"BaselineTag",old},{"SelectedTag",field("Tag")},{"UsesPublishedReleaseJSON",true},{"PlayerDataRead",false},{"GameLaunched",false},{"UpdateInstalled",false}}.ToString());
++        Console.WriteLine("6 published update discovery assertions passed against the sealed 1.3 client.");return 0;
++    }catch(Exception e){Console.Error.WriteLine(e);return 1;}}
++}
+--- /dev/null
++++ b/stable-remastered/tests/ShellWorkTests.cs
+@@ -0,0 +1,40 @@
++// Compile the actual worker source with a controllable shell state. No GPU/UI.
++using System;using System.Linq;using System.Threading;using System.Threading.Tasks;using System.Diagnostics;
++using StableRemastered.Application.Shell;
++namespace osu {
++    internal enum OsuModes {Menu,Play,SelectPlay}
++    internal static class GameBase {
++        internal static OsuModes Mode=OsuModes.Play;internal static event Action OnModeChange;
++        internal static void Change(OsuModes mode){Mode=mode;OnModeChange?.Invoke();}
++    }
++}
++namespace StableRemastered.Application.Shell {
++    internal sealed class TestWorkerSettings {internal int Limit=2;internal int EffectiveBackgroundWorkers(int cpus)=>Limit;}
++    internal static class ShellPreferences {
++        internal static TestWorkerSettings Current=new TestWorkerSettings();internal static event Action Changed;
++        internal static void SetLimit(int n){Current.Limit=n;Changed?.Invoke();}
++    }
++}
++class ShellWorkTests {
++    static int checks,calls,active,peak;
++    static void Check(bool b,string s){checks++;if(!b)throw new Exception(s);}
++    static void Until(Func<bool> test,string label){var clock=Stopwatch.StartNew();while(!test()){if(clock.ElapsedMilliseconds>5000)throw new Exception(label);Thread.Sleep(5);}checks++;}
++    static int Main(string[] args){try{
++        AppDomain.MonitoringIsEnabled=true;var cancel=new CancellationTokenSource();
++        var held=Enumerable.Range(0,48).Select(n=>ShellWork.Run(token=>{Interlocked.Increment(ref calls);return n;},cancel.Token)).ToArray();
++        Thread.Sleep(200);Check(calls==0&&ShellWork.Active==0&&ShellWork.Queued==48,"Gameplay started artwork instead of deferring it");
++        long before=AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize;Thread.Sleep(300);long idle=AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize-before;
++        Check(calls==0&&held.All(t=>!t.IsCompleted),"Blocked artwork unexpectedly completed");
++        cancel.Cancel();Until(()=>held.All(t=>t.IsCompleted),"Cancelled blocked jobs did not finish");Check(held.All(t=>t.IsCanceled),"Blocked cancellations faulted or ran work");Until(()=>ShellWork.Queued==0,"Cancelled queue leaked counters");
++        using(var release=new ManualResetEventSlim(false)){
++            var jobs=Enumerable.Range(0,12).Select(n=>ShellWork.Run(token=>{int a=Interlocked.Increment(ref active);int old;do{old=peak;if(a<=old)break;}while(Interlocked.CompareExchange(ref peak,a,old)!=old);Interlocked.Increment(ref calls);release.Wait(token);Interlocked.Decrement(ref active);return n;},CancellationToken.None)).ToArray();
++            osu.GameBase.Change(osu.OsuModes.Menu);Until(()=>ShellWork.Active==2,"Returning to menus did not wake queued artwork");Thread.Sleep(30);Check(peak==2&&ShellWork.Active==2&&ShellWork.Queued==10,"Worker bound was not respected");
++            ShellPreferences.SetLimit(3);Until(()=>ShellWork.Active==3,"Performance-profile change did not wake the additional slot");Check(peak==3,"Worker profile exceeded its bound");release.Set();Check(Task.WaitAll(jobs,5000),"Queued jobs did not drain");Check(jobs.Select(t=>t.Result).OrderBy(n=>n).SequenceEqual(Enumerable.Range(0,12)),"Queue lost or duplicated jobs");
++        }
++        Until(()=>ShellWork.Active==0&&ShellWork.Queued==0,"Completed jobs leaked counters");
++        var fault=ShellWork.Run<int>(token=>{throw new InvalidOperationException("Expected fixture failure");},CancellationToken.None);Until(()=>fault.IsCompleted,"Worker exception did not complete");Check(fault.IsFaulted&&fault.Exception.GetBaseException().Message=="Expected fixture failure","Worker failure was hidden");
++        var next=ShellWork.Run(token=>42,CancellationToken.None);Check(next.Wait(5000)&&next.Result==42,"Failed job stranded queue capacity");
++        osu.GameBase.Change(osu.OsuModes.Play);var pending=Enumerable.Range(0,16).Select(n=>ShellWork.Run(token=>n,CancellationToken.None)).ToArray();var clock2=Stopwatch.StartNew();ShellWork.Shutdown();Check(pending.All(t=>t.IsCompleted&&t.IsCanceled),"Shutdown did not cancel blocked artwork");Check(ShellWork.Active==0&&ShellWork.Queued==0,"Shutdown retained queue slots");Check(ShellWork.Run(token=>0,CancellationToken.None).IsCanceled,"Shutdown accepted new artwork");
++        Console.WriteLine(checks+" shell worker checks passed; blocked-queue 300ms allocated bytes="+idle+"; shutdownMs="+clock2.Elapsed.TotalMilliseconds.ToString("F2"));return 0;
++    }catch(Exception e){Console.Error.WriteLine(e);return 1;}}
++}
+--- /dev/null
++++ b/stable-remastered/tests/V14MaxMovement.cpp
+@@ -0,0 +1,57 @@
++// Production Max model + native movement wrapper; no OS input or score writes.
++#include "V104AssistAudit.cpp"
++#include "personal/MaxCursorAuthority.h"
++#include "personal/MaxMovementBudget.h"
++#include <chrono>
++#include <stdexcept>
++namespace {
++unsigned movementChecks=0,limited=0,hosted=0,invariant=0;
++void need(bool b,const char* s){++movementChecks;if(!b)throw std::runtime_error(s);}
++Frame input(int t,Point p=Point()){Frame f;f.owner=owner;f.active=true;f.map=t;f.input=p;f.hitRadius=22;f.hitWindow50=100;return f;}
++Point difference(Point a,Point b){return Point(a.x-b.x,a.y-b.y);}
++double norm(Point p){return std::sqrt(distance2(p,Point()));}
++void pure(){
++    MaxMovementBudget b;auto f=input(0);need(distance2(b.process(f,Point(400,100),.5),f.input)==0,"First ownership sample acquired a positional anchor");
++    for(int t=1;t<100;t++){f.map=t;need(distance2(b.process(f,Point(400,100),.5),f.input)==0,"Stationary raw cursor acquired a target");}
++    f.map=100;f.input=Point(.02,0);auto o=b.process(f,Point(400,100),.5);need(norm(difference(o,f.input))<=.02000000001,"Tiny physical motion became a target-sized jump");
++    b.reset();b.process(input(0),Point(100,0),.5);f=input(1,Point(10,0));o=b.process(f,Point(40,0),.5);need(std::abs(o.x-20)<1e-12,"Max full strength does not match V1 movement budget");
++    auto offset=difference(o,f.input);for(int n=0;n<200;n++)need(distance2(b.process(f,Point(400,0),.5),o)==0,"Repeated same-clock polling bought extra guidance");
++    f.input=Point(15,0);auto same=b.process(f,Point(400,0),.5);need(std::abs(same.x-25)<1e-12,"Same-clock raw motion was delayed");
++    f.map=2;auto next=b.process(f,Point(400,0),.5);need(std::abs(next.x-30)<1e-12,"Same-clock physical displacement was lost or bought twice");
++    double previous=norm(difference(next,f.input));for(int t=3;t<100;t++){f.map=t;auto released=b.process(f,Point(400,0),.5);double current=norm(difference(released,f.input));need(current<=previous+1e-12,"Stopped cursor gained more target ownership");previous=current;}need(previous<1e-8,"Stopped cursor retained a stale offset");
++    b.reset();b.process(input(0),Point(100,0),.25);f=input(1,Point(10,0));need(std::abs(b.process(f,Point(40,0),.25).x-15)<1e-12,"Lower gain did not scale only its allowed budget");
++    b.reset();b.process(input(0),Point(400,0),.5);f=input(1,Point(350,0));need(b.process(f,Point(375,0),.5).x==375,"Enough physical motion unnecessarily weakened qualified Max output");
++    f.owner++;need(distance2(b.process(f,Point(400,0),.5),f.input)==0,"Map owner change retained offset");
++    f.map=0;need(distance2(b.process(f,Point(400,0),.5),f.input)==0,"Retry/rewind retained offset");f.map=1000;need(distance2(b.process(f,Point(400,0),.5),f.input)==0,"Large clock gap bought a correction burst");
++    for(int mode=0;mode<5;mode++){f=input(0);b.reset();b.process(f,Point(100,0),.5);f=input(1,Point(10,0));b.process(f,Point(100,0),.5);f.map=2;double gain=.5;Point desired(100,0);if(mode==0)f.active=false;if(mode==1)f.assistAllowed=false;if(mode==2)gain=0;if(mode==3)desired.x=std::numeric_limits<double>::quiet_NaN();if(mode==4)gain=1;need(distance2(b.process(f,desired,gain),f.input)==0,"Inactive/invalid state retained movement ownership");}
++    // Equal straight physical paths spend equal movement at each rate. Map
++    // time, not the number of callbacks, owns release and accumulated input.
++    for(double gain:{.1,.25,.5})for(double rate:{1.,1.17,1.5,2.})for(int hz:{60,120,144,240,360,1000,4000}){
++        MaxMovementBudget test;test.process(input(400),Point(1000,0),gain);Point last,priorRaw;int prior=400;
++        for(int n=1;;n++){int t=std::min(1000,400+int(n*1000.*rate/hz));if(t<=prior)continue;f=input(t,Point((t-400)*.02,0));auto out=test.process(f,Point(f.input.x+1000,0),gain);auto nowOffset=difference(out,f.input);need(norm(difference(nowOffset,last))<=norm(difference(f.input,priorRaw))*(gain/.5)+1e-10,"Observed guidance exceeded physical displacement budget");last=nowOffset;priorRaw=f.input;prior=t;limited++;if(t==1000){need(std::abs(out.x-(12+12*gain/.5))<1e-8,"Movement budget depended on callback rate or Timewarp");invariant++;break;}}
++    }
++}
++void model(const char* assembly,const char* data){
++    HostedModel model;need(model.initialize(wide(assembly),wide(data),read,true),"Qualified Max model unavailable");
++    for(bool ac:{false,true})for(double rate:{1.,1.17,2.})for(int hz:{60,144,360,4000}){
++        targets={circle(1000,400)};MaxCursorAuthority authority;MaxMovementBudget budget;Collection objects;objects.values={head(1000,400)};InputCoordinator coordinator;Settings settings;settings.aim=ac;settings.radius=75;settings.relax=true;
++        ModelFrame m;m.owner=owner;m.flags=1|(ac?2:0);m.intensity=.5;m.count=1;m.rate=rate;m.refreshHz=hz;m.hitRadius=22;m.hitWindow50=100;m.approachTime=400;m.acRadius=m.acRxRadius=ac?75:0;
++        model.reset();bool hit=false;Point lastOffset,lastRaw;int prior=600;
++        for(int n=0;;n++){
++            int t=600+int(n*1000.*rate/hz);if(t>1100)break;
++            m.mapMilliseconds=t;m.realMilliseconds=10000+t/rate;m.rawX=std::min(375.,(t-600)*.9375);m.rawY=100;
++            auto f=input(t,Point(m.rawX,m.rawY));objects.now=t;auto d=authority.evaluate(f,true,m.approachTime,objects);if(d.resetModel){model.reset();budget.reset();}
++            ModelOutput original;need(d.allow&&model.process(m,original),"Real planner lost active target");need(original.targetIndex==0&&MaxCursorAuthority::accepts(d,f,m.approachTime,objects,0),"Budget changed native target ownership");
++            Point guided=original.hasRequested?budget.process(f,Point(original.blendedX,original.blendedY),m.intensity):f.input;
++            if(n&&t>prior&&norm(difference(f.input,lastRaw))>=(t-prior)*.001)need(norm(difference(difference(guided,f.input),lastOffset))<=norm(difference(f.input,lastRaw))+1e-5,"Real planner publication exceeded movement budget");
++            lastRaw=f.input;lastOffset=difference(guided,f.input);prior=t;f.input=guided;auto out=coordinator.prepare(f,settings,objects);hosted++;
++            if(out.pressed&&out.target==0){need(t>=988&&t<=1100,"Combined Relax tapped outside the native window");need(distance2(out.cursor,objects.at(0).head)<=22*22,"Combined AC/Relax did not publish a valid hit cursor");hit=true;break;}
++        }
++        need(hit,"Movement-limited Max could not guide/capture a supported head");
++    }
++}
++}
++extern "C" __declspec(dllexport) int sr_test_max_movement(const char* assembly,const char* data,const char* output){
++    std::ofstream report(output);try{pure();model(assembly,data);report<<"{\"Passed\":true,\"Checks\":"<<movementChecks<<",\"BoundedSamples\":"<<limited<<",\"RateInvariantStraightPaths\":"<<invariant<<",\"HostedPlannerSamples\":"<<hosted<<",\"ModelStrengthChanged\":false,\"PhysicalDeviceQualified\":false}";return 0;}
++    catch(const std::exception& e){report<<"{\"Passed\":false,\"Checks\":"<<movementChecks<<",\"Error\":\""<<e.what()<<"\"}";return 1;}
++}
+--- /dev/null
++++ b/stable-remastered/tests/V14MaxSettingsTests.cs
+@@ -0,0 +1,35 @@
++using System;
++using System.IO;
++using System.Linq;
++using Newtonsoft.Json;
++using Newtonsoft.Json.Linq;
++using StableRemastered.Gameplay;
++using StableRemastered.Application.Accounts;
++internal static class V14MaxSettingsTests
++{
++    static int checks;
++    static void Check(bool b,string label){checks++;if(!b)throw new Exception(label);}
++    static void Reject(Action a){try{a();}catch(ArgumentException){checks++;return;}throw new Exception("Invalid Max V2 settings accepted");}
++    internal static void Run(string root)
++    {
++        var historical=JsonConvert.DeserializeObject<GameplaySettings>("{\"MaxAssistEnabled\":true,\"AssistIntensity\":0.5}");
++        historical.Validate();Check(historical.MaxAssist.Version==MaxAssistVersion.V1,"Historical gameplay silently changed to V2");
++        Check(JsonConvert.DeserializeObject<StableRemastered.Accounts.OfflineProfile>("{}").MaxAssist.Version==MaxAssistVersion.V1,"Historical profile did not default to V1");
++        var empty=new GameplaySettings{MaxAssist=null};empty.Validate();Check(empty.MaxAssist.Version==MaxAssistVersion.V1,"Null legacy context did not recover to V1");
++        foreach(var version in new[]{MaxAssistVersion.V1,MaxAssistVersion.V2})foreach(double power in new[]{0d,.05,.5,1d,1.95,2d}){
++            var settings=new GameplaySettings{MaxAssist=new MaxAssistOptions{Version=version,RefinementPower=power,SliderPower=power}};settings.Validate();var copy=JsonConvert.DeserializeObject<GameplaySettings>(JsonConvert.SerializeObject(settings));copy.Validate();Check(copy.MaxAssist.Version==version&&copy.MaxAssist.RefinementPower==power&&copy.MaxAssist.SliderPower==power,"Gameplay/replay context lost Max version or power");
++        }
++        foreach(double bad in new[]{double.NaN,double.NegativeInfinity,-.01,2.01}){Reject(()=>new MaxAssistOptions{RefinementPower=bad}.Validate());Reject(()=>new MaxAssistOptions{SliderPower=bad}.Validate());}
++        Reject(()=>new MaxAssistOptions{Version=(MaxAssistVersion)2}.Validate());
++        string folder=Path.Combine(root,"max-v2");var store=new LocalAccountStore(folder);var first=store.ActiveProfileId;var second=store.CreateProfile("Max other");
++        store.SetMaxAssist(first,new MaxAssistOptions{Version=MaxAssistVersion.V2,RefinementPower=1.5,SliderPower=.75});
++        var detached=store.MaxAssistFor(first);detached.RefinementPower=0;Check(store.MaxAssistFor(first).RefinementPower==1.5&&store.MaxAssistFor(second.Id).Version==MaxAssistVersion.V1,"Max settings leaked between snapshots or profiles");
++        store.RenameProfile(first,"Renamed Max");store.SwitchProfile(second.Id);store.SwitchProfile(first);
++        var restarted=new LocalAccountStore(folder);var restored=restarted.MaxAssistFor(first);
++        Check(restarted.ActiveProfileId==first&&restored.Version==MaxAssistVersion.V2&&restored.RefinementPower==1.5&&restored.SliderPower==.75,"Rename/profile switch/restart lost V2 options");
++        Check(!restarted.MapleFor(first).Enabled,"Changing Max variant unexpectedly enabled Maple");
++        string manifest=Path.Combine(folder,"profiles.json");var json=JObject.Parse(File.ReadAllText(manifest));var profile=json["Data"]["Profiles"].First(p=>(Guid)p["Id"]==first);profile["MaxAssist"]["Version"]=99;File.WriteAllText(manifest,json.ToString());string saved=File.ReadAllText(manifest);
++        var recovered=new LocalAccountStore(folder);Check(recovered.MaxAssistFor(first).Version==MaxAssistVersion.V1&&recovered.Warning.Contains("Invalid Max Assist"),"Invalid stored Max version prevented safe recovery");Check(File.ReadAllText(manifest)==saved,"Max recovery rewrote user history");
++        File.WriteAllText(Path.Combine(root,"v14-max-settings.json"),JsonConvert.SerializeObject(new{Passed=true,Checks=checks,PlayerDataUsed=false},Formatting.Indented));Console.WriteLine(checks+" Max V1/V2 settings and persistence checks passed");
++    }
++}
+--- /dev/null
++++ b/stable-remastered/tests/V14MaxV2.cpp
+@@ -0,0 +1,91 @@
++// Actual qualified planner + V2 movement adapter; no OS input or score writes.
++#include "V104AssistAudit.cpp"
++#include "personal/MaxAssistV2.h"
++#include <stdexcept>
++#include <chrono>
++namespace {
++unsigned v2Checks=0,v2Hosted=0,v2Paths=0,v2Bodies=0;
++void requireV2(bool b,const char* label){++v2Checks;if(!b)throw std::runtime_error(label);}
++double normV2(Point p){return std::sqrt(distance2(p,Point()));}
++Point subV2(Point a,Point b){return Point(a.x-b.x,a.y-b.y);}
++Frame frameV2(int t,Point p=Point()){Frame f;f.owner=owner;f.active=true;f.map=t;f.hitRadius=22;f.hitWindow50=100;f.input=p;return f;}
++struct PathObjects:Collection {
++    Object at(std::size_t i)const override{return atTime(i,now);}
++    Object atTime(std::size_t i,std::int64_t time)const override{auto o=Collection::at(i);if(o.kind==Kind::Slider&&o.headHandled)o.path=Point(100+(time-1000)*.1,100);return o;}
++};
++void pureV2(){
++    Collection objects;objects.values={head(1000,100)};Settings ac;
++    auto run=[&](MaxAssistV2& b,Frame f,Point plan,double power=2,double slider=2){return b.process(f,plan,.5,ac,objects,0,500,power,slider);};
++    MaxAssistV2 b;auto f=frameV2(600,Point(0,100));requireV2(distance2(run(b,f,Point(100,100)),f.input)==0,"V2 acquired a first-frame anchor");
++    for(int t=601;t<650;t++){f.map=t;requireV2(distance2(run(b,f,Point(100,100)),f.input)==0,"V2 moved a stationary cursor");}
++    f=frameV2(650,Point(.02,100));auto out=run(b,f,Point(100,100));requireV2(normV2(subV2(out,f.input))<=.0200000001,"V2 double-spent tiny raw motion");
++    for(int n=0;n<100;n++)requireV2(distance2(run(b,f,Point(200,100)),out)==0,"V2 extra callback increased correction");
++    f.input.x+=.01;requireV2(std::abs(run(b,f,Point(200,100)).x-out.x-.01)<1e-12,"Same-clock physical motion was delayed");
++    f.map++;auto next=run(b,f,Point(100,100));requireV2(normV2(subV2(subV2(next,f.input),subV2(out,Point(.02,100))))<=.0100000001,"Same-clock physical motion was spent twice");
++    double prior=normV2(subV2(next,f.input));for(int t=652;t<740;t++){f.map=t;next=run(b,f,Point(100,100));double now=normV2(subV2(next,f.input));requireV2(now<=prior+1e-12,"V2 added pull with stopped raw input");prior=now;}requireV2(prior<1e-9,"V2 retained stale stationary guidance");
++    for(int mode=0;mode<9;mode++){
++        b.reset();run(b,frameV2(600,Point(0,100)),Point(90,100));run(b,frameV2(601,Point(10,100)),Point(90,100));f=frameV2(602,Point(20,100));double power=2,slider=2;
++        if(mode==0)f.active=false;if(mode==1)f.assistAllowed=false;if(mode==2)f.owner++;if(mode==3)f.map=0;if(mode==4)f.map=2000;if(mode==5)power=3;if(mode==6)slider=std::numeric_limits<double>::quiet_NaN();if(mode==7)f.hitRadius=0;if(mode==8)power=1;
++        requireV2(distance2(run(b,f,Point(100,100),power,slider),f.input)==0,"V2 reset/validation retained an old offset");
++    }
++    b.reset();f=frameV2(600,Point(60,100));run(b,f,Point(80,100));f.map++;f.input.x++;
++    requireV2(distance2(b.process(f,Point(80,100),.5,ac,objects,NoObject,500,2,2),f.input)==0,"V2 accepted a missing planner target");
++    // Fine guidance is an additional bounded benefit near a planned endpoint.
++    // Compare to the same V2 map-clock path with refinement explicitly zero.
++    MaxAssistV2 on,off;for(int t=600;t<=700;t++){f=frameV2(t,Point(60+(t-600)*.25,100));auto a=run(on,f,Point(80,100),2),z=run(off,f,Point(80,100),0);requireV2(a.x+1e-10>=z.x&&a.x<=100+1e-10,"Fine guidance weakened Max or overshot its target");if(t==700)requireV2(a.x>z.x+1,"V2 refinement provided no close-target benefit");}
++    // The selected Max target stays authoritative even with another nearer head.
++    objects.values={head(1000,70),head(1000,130)};MaxAssistV2 locked;
++    for(int t=600;t<=700;t++){f=frameV2(t,Point(60+(t-600)*.1,100));out=locked.process(f,Point(100,100),.5,ac,objects,1,500,2,2);requireV2(out.x>=f.input.x,"V2 selected a competing target");}
++    objects.values={head(1000,100)};
++    {
++        objects.values={head(1000,100),head(1100,300)};MaxAssistV2 handoff;
++        handoff.process(frameV2(600,Point(200,100)),Point(100,100),.5,ac,objects,0,500,0,0);
++        out=handoff.process(frameV2(601,Point(190,100)),Point(100,100),.5,ac,objects,0,500,0,0);
++        requireV2(std::abs(out.x-180)<1e-10,"V2 target handoff fixture did not establish previous offset");
++        out=handoff.process(frameV2(611,Point(200,100)),Point(300,100),.5,ac,objects,1,500,0,0);
++        requireV2(std::abs(out.x-200)<1e-10,"V2 blended a stale object's plan across target handoff");
++        objects.values={head(1000,100)};
++    }
++    for(bool aim:{false,true})for(double power:{0.,.5,1.,2.})for(double rate:{1.,1.17,1.5,2.}){
++        ac.aim=aim;ac.radius=120;Point reference;bool have=false;
++        for(int hz:{60,120,144,240,360,1000,4000}){
++            MaxAssistV2 test;test.process(frameV2(600,Point(50,100)),Point(75,100),.5,ac,objects,0,500,power,2);int previous=600;Point lastOffset;
++            for(int n=1;;n++){int t=std::min(1000,600+int(n*1000.*rate/hz));if(t<=previous)continue;f=frameV2(t,Point(50+(t-600)*.05,100));out=test.process(f,Point(75+(t-600)*.025,100),.5,ac,objects,0,500,power,2);auto offset=subV2(out,f.input);requireV2(normV2(subV2(offset,lastOffset))<=(t-previous)*.05+1e-8,"V2 combined correction exceeded one physical budget");lastOffset=offset;previous=t;if(t==1000)break;}
++            if(have&&distance2(out,reference)>=1e-12)throw std::runtime_error("V2 map-clock mismatch: AC="+std::to_string(aim)+" power="+std::to_string(power)+" rate="+std::to_string(rate)+" hz="+std::to_string(hz)+" out="+std::to_string(out.x)+" reference="+std::to_string(reference.x));
++            if(have)requireV2(true,"Map-clock path invariant");reference=out;have=true;v2Paths++;
++        }
++    }
++    // Authored slider paths and automatic authority work independently of AC.
++    for(bool aim:{false,true})for(bool automatic:{false,true})for(double power:{0.,.5,1.,2.}){
++        PathObjects path;auto slider=head(1000,100);slider.kind=Kind::Slider;slider.end=2000;slider.headHandled=true;path.values={slider};
++        Settings s;s.aim=aim;s.radius=120;s.relax=true;s.tracking=automatic;MaxAssistV2 guide;InputCoordinator coordinator;
++        double priorError=1000;
++        for(int t=1000;t<=1400;t++){
++            f=frameV2(t,Point(90+(t-1000)*.1,100));auto plan=Point(95+(t-1000)*.1,100);auto guided=guide.process(f,plan,.5,s,path,0,500,2,power);
++            requireV2(finite(guided),"V2 slider output invalid");path.now=t;f.input=guided;auto result=coordinator.prepare(f,s,path);v2Bodies++;
++            if(automatic)requireV2(result.slider==0&&distance2(result.cursor,path.atTime(0,t).path)<1e-12,"Automatic V2 slider lost native body authority with AC on/off");
++            else{double error=normV2(subV2(guided,path.atTime(0,t).path));requireV2(error<=priorError+1e-8,"V2 guided slider correction oscillated");priorError=error;}
++        }
++    }
++}
++void hostedV2(const char* assembly,const char* data){
++    HostedModel model;requireV2(model.initialize(wide(assembly),wide(data),read,true),"Qualified Max model unavailable for V2");
++    for(bool aim:{false,true})for(double power:{0.,1.,2.})for(double rate:{1.,1.17,2.})for(int hz:{60,144,360,4000}){
++        targets={circle(1000,400)};Collection objects;objects.values={head(1000,400)};MaxCursorAuthority authority;MaxAssistV2 guide;InputCoordinator coordinator;Settings settings;settings.aim=aim;settings.radius=75;settings.relax=true;
++        ModelFrame m;m.owner=owner;m.flags=1|(aim?2:0);m.intensity=.5;m.count=1;m.rate=rate;m.refreshHz=hz;m.hitRadius=22;m.hitWindow50=100;m.approachTime=400;m.acRadius=m.acRxRadius=aim?75:0;model.reset();bool hit=false;
++        for(int n=0;;n++){
++            int t=600+int(n*1000.*rate/hz);if(t>1100)break;m.mapMilliseconds=t;m.realMilliseconds=10000+t/rate;m.rawX=std::min(375.,(t-600)*.9375);m.rawY=100;
++            auto f=frameV2(t,Point(m.rawX,m.rawY));objects.now=t;auto d=authority.evaluate(f,true,m.approachTime,objects);if(d.resetModel){model.reset();guide.reset();}
++            ModelOutput original;requireV2(d.allow&&model.process(m,original),"V2 planner lost active target");requireV2(original.targetIndex==0&&MaxCursorAuthority::accepts(d,f,m.approachTime,objects,0),"V2 changed native target ownership");
++            Point guided=original.hasRequested?guide.process(f,Point(original.blendedX,original.blendedY),m.intensity,settings,objects,original.targetIndex,m.approachTime,power,2):f.input;
++            f.input=guided;auto out=coordinator.prepare(f,settings,objects);v2Hosted++;
++            if(out.pressed&&out.target==0){requireV2(t>=988&&t<=1100,"V2 Relax tapped outside native window");requireV2(distance2(out.cursor,objects.at(0).head)<=22*22,"V2 AC/Relax hit cursor invalid");hit=true;break;}
++        }
++        requireV2(hit,"V2 could not guide/capture supported head");
++    }
++}
++}
++extern "C" __declspec(dllexport) int sr_test_max_v2(const char* assembly,const char* data,const char* output){
++    std::ofstream report(output);auto start=std::chrono::steady_clock::now();try{pureV2();hostedV2(assembly,data);auto ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count();report<<"{\"Passed\":true,\"Checks\":"<<v2Checks<<",\"MapClockPaths\":"<<v2Paths<<",\"HostedPlannerSamples\":"<<v2Hosted<<",\"SliderBodySamples\":"<<v2Bodies<<",\"TotalFixtureMs\":"<<ms<<",\"PhysicalDeviceQualified\":false}";return 0;}
++    catch(const std::exception& e){report<<"{\"Passed\":false,\"Checks\":"<<v2Checks<<",\"Error\":\""<<e.what()<<"\"}";return 1;}
++}
+--- a/stable-remastered/tools/Test-Accounts.ps1
++++ b/stable-remastered/tools/Test-Accounts.ps1
+@@ -36,6 +36,7 @@
+ $sources+=Join-Path $projectRoot 'tests\OsrExchangeTests.cs'
+ $sources+=Join-Path $projectRoot 'tests\KawataProviderTests.cs'
+ $sources+=Join-Path $projectRoot 'tests\V11MapleSettingsTests.cs'
++$sources+=Join-Path $projectRoot 'tests\V14MaxSettingsTests.cs'
+ $sources+=Join-Path $projectRoot 'tools\PPProviderHarness.cs'
+ $test=Join-Path $testFolder 'AccountTests.exe'
+ & (Find-BoshCSharp) /nologo /target:exe /platform:x64 /langversion:7.3 /r:System.Numerics.dll /r:System.Drawing.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll "/r:$json" "/r:$common" "/out:$test" $sources (Join-Path $projectRoot 'tests\AccountTests.cs')
+--- a/stable-remastered/tools/Test-Release.ps1
++++ b/stable-remastered/tools/Test-Release.ps1
+@@ -17,9 +17,10 @@
+ $summary = @()
+ Push-Location $testRoot
+ try {
+-    foreach ($name in 'ContractTests','V101BridgeTests','ShellContractTests','OfflineShellTests','ClientUpdateTests','V13OverheadTests','LibraryImportTests','RateBonusTests','AdditionalModesTests','CaptureSetupTests') {
++    foreach ($name in 'ContractTests','V101BridgeTests','ShellContractTests','OfflineShellTests','ClientUpdateTests','V13OverheadTests','LibraryImportTests','RateBonusTests','AdditionalModesTests','CaptureSetupTests','ShellWorkTests') {
+         $target = Join-Path $testRoot ($name+'.exe')
+         $extraSources=@();if($name -eq 'LibraryImportTests'){$extraSources=@(Join-Path $projectRoot 'application/LibraryImport.cs')}
++        if($name -eq 'ShellWorkTests'){$extraSources=@(Join-Path $projectRoot 'application/Shell/ShellWork.cs')}
+         & $compiler /nologo /target:exe /platform:x64 /langversion:7.3 /r:System.Numerics.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll "/r:$hostFile" "/r:$json" "/r:$common" "/out:$target" (Join-Path $projectRoot ('tests/'+$name+'.cs')) @extraSources
+         if ($LASTEXITCODE -ne 0) { throw "$name compilation failed." }
+         $arguments = @()
+--- a/stable-remastered/tools/archive_source.py
++++ b/stable-remastered/tools/archive_source.py
+@@ -9,7 +9,7 @@
+ R=Path(__file__).resolve().parents[1]
+ EXCLUDED={'.git','.vs','.idea','.vscode','bin','obj','target','node_modules','__pycache__','_build','preview','checkpoints','evidence','packages'}
+ SUFFIXES={'.dll','.exe','.pdb','.lib','.a','.so','.dylib','.obj','.o','.user','.suo','.cfg','.zip','.7z','.nupkg','.log','.csv','.jsonl','.bak','.tmp'}
+-TOOLS={'Build.ps1','Toolchain.ps1','Build-Shell.ps1','Build-Engine.ps1','Build-Personal.ps1','Test-Release.ps1','Test-Accounts.ps1','Test-V02.ps1','PPProviderHarness.cs','New-PPProvider.ps1','Test-PPProvider.ps1','prepare_native_dependencies.py','restore_runtime_dependencies.py','archive_source.py','analyze_qualification.py','test_assist_regression.py','stage_release.py','seal_release.py'}
++TOOLS={'Build.ps1','Toolchain.ps1','Build-Shell.ps1','Build-Engine.ps1','Build-Personal.ps1','Test-Release.ps1','Test-Accounts.ps1','Test-V02.ps1','PPProviderHarness.cs','New-PPProvider.ps1','Test-PPProvider.ps1','prepare_native_dependencies.py','restore_runtime_dependencies.py','archive_source.py','analyze_qualification.py','test_assist_regression.py','test_max_movement.py','test_shell_workers.py','stage_release.py','seal_release.py'}
+ ROOT_FILES={'CMakeLists.txt','StableRemastered.sln','Directory.Build.props','NuGet.Config','README.md','LICENSE','.gitignore','UPDATES.md','PP_PROVIDER_API.md','PP_AUTHORING_QUICKSTART.md','GITHUB_ISSUE_WORK_REPORT.md'}
+ 
+ def sha(path):
+--- a/stable-remastered/tools/stage_release.py
++++ b/stable-remastered/tools/stage_release.py
+@@ -52,7 +52,7 @@
+ This is not a blanket correctness or zero-spike certificate. The sealed baseline
+ and candidate reproduce existing PP edge cases (accuracy monotonicity/Hidden on
+ synthetic maps) and a one-judgment mismatch in a captured dense-map replay.
+-See STABLE_REMASTERED_V14_ISSUE_FIXES.md for current tests and remaining limits.
++See the included STABLE_REMASTERED_V14_* reports for tests and remaining limits.
+ Version 1.3 reports describe the historical sealed baseline.
+ 
+ Live account authentication/submission, physical device feel on other PCs and
+--- a/stable-remastered/tools/test_assist_regression.py
++++ b/stable-remastered/tools/test_assist_regression.py
+@@ -19,7 +19,7 @@
+                     if code:raise ValueError(('Trace fixture failed',code))
+                     rows[path.name]=dict(SHA256=sha(path),Samples=sum(1 for _ in path.open())-1)
+         if rows!=expected:raise ValueError('Production trajectory differs from the qualified trace manifest')
+-        for fixture,function,hosted in [('V106CaptureBoundary','sr_test_capture_boundary',True),('V11MaxCursorAuthority','sr_test_max_cursor_authority',True),('V11MaxAC','sr_test_max_ac',True),('V11Maple','sr_test_maple',False),('V11SliderAuthority','sr_test_slider_authority',False),('V11AssistActivity','sr_test_assist_activity',True)]:
++        for fixture,function,hosted in [('V106CaptureBoundary','sr_test_capture_boundary',True),('V11MaxCursorAuthority','sr_test_max_cursor_authority',True),('V14MaxMovement','sr_test_max_movement',True),('V14MaxV2','sr_test_max_v2',True),('V11MaxAC','sr_test_max_ac',True),('V11Maple','sr_test_maple',False),('V11SliderAuthority','sr_test_slider_authority',False),('V11AssistActivity','sr_test_assist_activity',True)]:
+             target=a.output/(fixture+'.dll');source=R/'engine/mcosu/ultimate/personal'
+             command=[tools/'g++.exe','-std=c++11','-O2','-shared','-static-libgcc','-static-libstdc++','-I'+str(R/'engine/mcosu/ultimate'),R/('tests/'+fixture+'.cpp'),source/'InputCoordinator.cpp']
+             if hosted:command.append(source/'HostedModel.cpp')
+--- /dev/null
++++ b/stable-remastered/tools/test_max_movement.py
+@@ -0,0 +1,17 @@
++"""CPU-only production Max movement-budget fixture, without player data/UI."""
++from pathlib import Path
++import argparse,ctypes,json,os,subprocess
++R=Path(__file__).resolve().parents[1]
++def main():
++    p=argparse.ArgumentParser();p.add_argument('--model',type=Path,required=True);p.add_argument('--data',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--version',type=int,choices=[1,2],default=1);a=p.parse_args()
++    a.output=a.output.resolve();a.model=a.model.resolve();a.data=a.data.resolve()
++    if a.output.exists():raise ValueError('Use a fresh fixture output directory.')
++    a.output.mkdir(parents=True);tool=R/'_build/dependencies/toolchain/mingw64/bin';source=R/'engine/mcosu/ultimate/personal';dll=a.output/'MaxMovementTests.dll'
++    fixture='V14MaxMovement.cpp' if a.version==1 else 'V14MaxV2.cpp'
++    subprocess.run([str(v) for v in [tool/'g++.exe','-std=c++11','-O2','-shared','-static-libgcc','-static-libstdc++','-I'+str(R/'engine/mcosu/ultimate'),R/('tests/'+fixture),source/'InputCoordinator.cpp',source/'HostedModel.cpp','-o',dll,'-lole32']],check=True)
++    with os.add_dll_directory(str(tool)):
++        lib=ctypes.CDLL(str(dll));run=lib.sr_test_max_movement if a.version==1 else lib.sr_test_max_v2;run.argtypes=[ctypes.c_char_p]*3;run.restype=ctypes.c_int
++        report=a.output/'summary.json';code=run(str(a.model).encode(),str(a.data).encode(),str(report).encode())
++        result=json.loads(report.read_text());print(json.dumps(result,indent=2))
++        if code or not result['Passed']:raise ValueError('Max movement qualification failed.')
++if __name__=='__main__':main()
+--- /dev/null
++++ b/stable-remastered/tools/test_shell_workers.py
+@@ -0,0 +1,25 @@
++"""Compare actual queued-artwork implementations in isolated CPU processes."""
++from pathlib import Path
++import argparse,json,re,statistics,subprocess,zipfile
++R=Path(__file__).resolve().parents[1]
++def main():
++    p=argparse.ArgumentParser();p.add_argument('--compiler',type=Path,required=True);p.add_argument('--baseline-source',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args();a.output=a.output.resolve()
++    if a.output.exists():raise ValueError('Use a fresh comparison folder.')
++    a.output.mkdir(parents=True)
++    with zipfile.ZipFile(a.baseline_source) as z:(a.output/'ShellWork-baseline.cs').write_bytes(z.read('stable-remastered/application/Shell/ShellWork.cs'))
++    rows=[]
++    for name,source in [('baseline',a.output/'ShellWork-baseline.cs'),('candidate',R/'application/Shell/ShellWork.cs')]:
++        exe=a.output/(name+'.exe');build=subprocess.run([str(a.compiler),'/nologo','/target:exe','/platform:x64','/langversion:7.3','/out:'+str(exe),str(R/'tests/ShellWorkTests.cs'),str(source)],capture_output=True,text=True)
++        (a.output/(name+'-build.log')).write_text(build.stdout+build.stderr)
++        if build.returncode:raise ValueError('Worker fixture did not compile: '+name)
++        samples=[]
++        for n in range(3):
++            result=subprocess.run([str(exe)],capture_output=True,text=True,timeout=30);(a.output/(name+'-'+str(n)+'.log')).write_text(result.stdout+result.stderr)
++            if result.returncode:raise ValueError('Worker fixture failed: '+name)
++            match=re.search(r'(\d+) shell worker checks passed; blocked-queue 300ms allocated bytes=(\d+); shutdownMs=([\d.]+)',result.stdout)
++            if not match:raise ValueError('Missing worker comparison result.')
++            samples.append(dict(Checks=int(match[1]),IdleAllocatedBytes=int(match[2]),ShutdownMs=float(match[3])))
++        rows.append(dict(Name=name,Samples=samples,MedianIdleAllocatedBytes=statistics.median(x['IdleAllocatedBytes'] for x in samples)))
++    report=dict(Passed=True,Rows=rows,Scope='48 queued artwork jobs during simulated gameplay; 300ms idle allocation samples, admission/cancellation/shutdown tests using actual old/new worker source. Not whole-client FPS or GPU latency qualification.')
++    (a.output/'summary.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))
++if __name__=='__main__':main()

@@ -1,10 +1,10 @@
 {
   "Product": "Boshsu",
   "Version": "1.4",
-  "Tag": "v1.4.0-rc.1",
+  "Tag": "v1.4.0-rc.2",
   "Channel": "Prerelease",
   "Platform": "Windows x64",
-  "InheritedBaselineTag": "v1.3.0-rc.1",
+  "InheritedBaselineTag": "v1.4.0-rc.1",
   "FreshUserData": true,
   "PersonalDataIncluded": false,
   "PersonalClientAutoInstalled": false,
@@ -14,90 +14,67 @@
   "SavedScoresRecalculated": false,
   "ProtectedPPFilesUnchanged": 2876,
   "QualifiedAssistModelChanged": false,
-  "CPUAssertions": 28542,
-  "AccountProviderAssertions": 3422,
-  "IssuePageAssertions": 54,
-  "AdditionalModesRuntimeAssertions": 33,
-  "IssueFixReport": "docs/STABLE_REMASTERED_V14_ISSUE_FIXES.md",
+  "CPUAssertions": 28560,
+  "AccountProviderAssertions": 3451,
+  "IssueFixReport": "docs/STABLE_REMASTERED_V14_MOVEMENT_REPORT.md",
   "IssueLedger": "docs/GITHUB_ISSUE_WORK_REPORT.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": true,
+  "HostedCIQualified": false,
   "PhysicalDeviceFeelQualified": false,
   "LiveOnlineSubmissionQualified": false,
   "LinuxQualified": false,
   "PublicRedistributionCertified": false,
-  "OBSCaptureQualifiedScope": "OBS 32.2.2; RX6600; OpenGL shared textures; 360p30; no desktop/microphone",
   "Files": {
     "Boshsu-1.4-clean.zip": {
-      "SHA256": "460cdf3f762f613896e1cecd3859d50d2f940d57810c628096660b79a7f5116d",
-      "Bytes": 161715582
+      "SHA256": "2849940b8d8508abaffbd4cce07e8e05f00528dfffd71c52bf82f765cf989c22",
+      "Bytes": 161727814
     },
     "Boshsu-1.4-source.zip": {
-      "SHA256": "ac2ea03ad370366340ce93f72855323c52a61797bfc76b93daf6937c99cbe0f7",
-      "Bytes": 125963973
+      "SHA256": "086fbe5fe3ccda7e7ef28993bd70bd7c5dc07cef5a28ff454a1733564ddc4067",
+      "Bytes": 125986893
     },
     "SHA256SUMS.txt": {
-      "SHA256": "579c631fb729c9defbb6d87ef508e89852a45c528916ebd1c3f2a0680166a8a4",
+      "SHA256": "2041478c172477c52d04112bd6e2024a9fa7549db4dc884124c37c8383b7cd1f",
       "Bytes": 177
     }
   },
-  "ExeSHA256": "b6daea36032440eadf5a177f5cd26d96404c7b4146cde9927e1e6037a6c0eade",
+  "ExeSHA256": "24826d06522dca5243058e2b2a9d926aa98dcaf300065dc6da5b4e5cb6632755",
   "CommonSHA256": "126fe21a83ef425f169af1de77468f16f69529fd2d7dfbdade74e60916700a43",
-  "UpdaterSHA256": "e8f64db0c09301ad7e8c346e3f7e50b3ed54ea8910c8d866956e17fa77a09ab0",
-  "NativeSHA256": "a744fa24f3a49d707333bb81667a4941fb6f33dde6564a118bff3941b8e70b67",
+  "UpdaterSHA256": "769502313a474d72f9e383579d9c997f9cf411e036e34e8f5dde8c59905709cc",
+  "NativeSHA256": "5b1203b81888da6c4f633dc00c6de597b164879a277817669211e1b7b3bd205b",
   "AssistModelSHA256": "b636fe27c4dc34bfd7a3dcf032b67dc9e43bc744fc80c073125fa4b57aecaa7e",
   "AssistModelDataSHA256": "0d57186a1c01b59f60d431c73395909cff41a2a2dc98c3245f79c27cbf7f602f",
   "PortableColdStart": {
     "Passed": true,
+    "Tag": "v1.4.0-rc.2",
     "Launches": 2,
-    "PackageTag": "v1.4.0-rc.1",
     "MainReached": true,
     "ShutdownCompleted": true,
     "FreshProfileRetained": true,
     "Fullscreen": true,
-    "SavedResolution": "1920x1080",
-    "TestMonitorOverride": true,
-    "LiveInstallationTouched": false
+    "TestMonitorOverride": true
   },
   "PackagePreservation": {
     "Passed": true,
-    "Checks": 1679,
+    "Checks": 1680,
     "ProtectedFiles": 15,
-    "ApplicationFiles": 1644,
+    "ApplicationFiles": 1645,
     "RollbackVerified": true,
     "LiveInstallationTouched": false,
-    "GameLaunched": false
-  },
-  "HostedCI": {
-    "Passed": true,
-    "RunId": 39321411056,
-    "Url": "https://github.com/hsob2nd/Boshsu/actions/runs/39321411056",
-    "Commit": "4c1781523f005f39ffa51c84b95ead3c7e00b8f4",
-    "Jobs": [
-      {
-        "Name": "verify",
-        "Status": "completed",
-        "Conclusion": "success"
-      },
-      {
-        "Name": "cpu-regression",
-        "Status": "completed",
-        "Conclusion": "success"
-      }
-    ],
-    "Scope": "Linux public-package/member/source integrity; Windows portable-host and source-compiled account/provider CPU fixtures. Not a full source build, Linux client launch, physical-device or all-hardware certificate."
-  },
-  "PublishedUpdateDiscovery": {
-    "Passed": true,
-    "Assertions": 6,
-    "BaselineTag": "v1.3.0-rc.1",
-    "SelectedTag": "v1.4.0-rc.1",
-    "UsesPublishedReleaseJSON": true,
-    "PlayerDataRead": false,
     "GameLaunched": false,
-    "UpdateInstalled": false
+    "Scope": "Actual complete package installed into a marked copy of the verified private portable checkpoint. Protected file bytes preserved; updater staging/recovery intentionally excluded. No player content uploaded."
   },
   "CompletedIssues": [
     11
-  ]
+  ],
+  "MaxV1MovementAssertions": 38349,
+  "MaxV2Assertions": 95366,
+  "MenuAssertions": 416,
+  "MaxAssistVariants": [
+    "V1",
+    "V2"
+  ],
+  "DefaultMaxAssistVariant": "V1",
+  "MaxV2Optional": true,
+  "MapleImplementationChanged": false
 }

@@ -4,6 +4,17 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.4 RC2 — Max Assist V2, movement and queue fixes (20 October 2026)
+
+- Kept movement-fixed Max Assist as V1 and added an optional V2 under Options → Assists → Max Assist. Existing profiles default to V1.
+- V2 retains the qualified planner/target locking and adds bounded movement-relative close-target and slider refinement, diminishing-return gains and shared AC-aware geometry. One cursor owner and one movement budget prevent stacked auto-pull.
+- Added per-profile version/refinement sliders, historical V1 defaults, context serialization and safe recovery. Target/head-to-body handoffs clear stale fine guidance.
+- Replaced blocked shell-artwork polling with state/capacity/cancellation signals. Measured blocked-queue allocations fell from a median 212,992 bytes per 300 ms to zero; this is not a general FPS claim.
+- Passed 95,366 V2 assertions, 38,349 V1 movement assertions, 45 unchanged qualified trajectory traces, 416 real-shell checks and four synthetic gameplay cycles. Matching portable ZIP startup/restart and data-preserving update/rollback passed.
+- Kept Maple V1/V3, PP formulas/rewards, qualified model/data and score history unchanged. Physical-device feel, broad hardware, dense replay parity and accepted server submissions retain their documented limits.
+
+See [V1/V2 integration and qualification](docs/STABLE_REMASTERED_V14_MOVEMENT_REPORT.md).
+
 ## 1.4 RC1 — Modes, replays, integration and GitHub issue fixes (19 October 2026)
 
 - Added native Flashlight presentation and preserved its mod metadata.

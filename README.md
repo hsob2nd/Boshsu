@@ -8,12 +8,14 @@ McOsu-derived code retains GPL-3.0, and original project modifications retain th
 
 Boshsu combines familiar song selection and skin-controlled gameplay with local profiles, custom PP systems, Map Lab, assistance settings, progression and player customization.
 
-**Current client: 1.4 RC1 · Windows x64 · release candidate.** Standard uses McOsu; supplied Taiko/Catch/Mania have initial lifecycle/replay qualification. Mode PP remains unavailable under the PP freeze. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md) and the [issue-fix ledger](docs/GITHUB_ISSUE_WORK_REPORT.md).
+**Current client: 1.4 RC2 · Windows x64 · release candidate.** Standard uses McOsu; supplied Taiko/Catch/Mania have initial lifecycle/replay qualification. Mode PP remains unavailable under the PP freeze. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md) and the [issue-fix ledger](docs/GITHUB_ISSUE_WORK_REPORT.md).
+
+Max Assist now offers **V1 / V2** in **Options → Assists → Max Assist**. V2 adds bounded target/slider refinement around the same qualified planner; old profiles keep V1. PP rules are unchanged. [Details and tests](docs/STABLE_REMASTERED_V14_MOVEMENT_REPORT.md).
 
 ## Download
 
-- **[Portable Windows x64 beta package — Boshsu-1.4-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.1/Boshsu-1.4-clean.zip)**
-- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.1/Boshsu-1.4-source.zip)
+- **[Portable Windows x64 beta package — Boshsu-1.4-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.2/Boshsu-1.4-clean.zip)**
+- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.2/Boshsu-1.4-source.zip)
 - [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.4.0-rc.1/SHA256SUMS.txt)
 - [Release notes](CHANGELOG.md)
 
