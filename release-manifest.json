@@ -23,7 +23,7 @@
   "GameplayCycles": 8,
   "IssueFixReport": "docs/STABLE_REMASTERED_V15_2_ASSIST_CORRECTION.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": false,
+  "HostedCIQualified": true,
   "PhysicalDeviceFeelQualified": false,
   "DenseReplayQualified": false,
   "LiveOnlineSubmissionQualified": false,
@@ -96,5 +96,27 @@
       "SHA256": "4a9bd28bd1dd838565d4f6b528753cf30bbc965ed31dd9940e2a6f2bbbd5a214",
       "Bytes": 181
     }
+  },
+  "HostedCI": {
+    "Id": 39643384903,
+    "Status": "completed",
+    "Conclusion": "success",
+    "URL": "https://github.com/hsob2nd/Boshsu/actions/runs/39643384903",
+    "Head": "e2937c092aa342461317a713e9b400bf16078763",
+    "Jobs": [
+      {
+        "Name": "verify",
+        "Status": "completed",
+        "Conclusion": "success"
+      },
+      {
+        "Name": "cpu-regression",
+        "Status": "completed",
+        "Conclusion": "success"
+      }
+    ],
+    "Passed": true,
+    "VerifiedUTC": "2026-10-21T17:28:53.748621+00:00",
+    "Scope": "Linux published ZIP/member/pinned-source integrity and Windows portable-host contracts plus source-compiled account/provider/PP CPU fixtures. Not a full source build, Linux runtime, GPU benchmark or human physical-device feel certification."
   }
 }
