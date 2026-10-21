@@ -4,6 +4,17 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.5.2 — Adaptive uses Max guidance; 100% maximum (21 October 2026)
+
+- Corrected Adaptive Assist to use the same blended guidance as normal Max. Learning Off or an untrained profile now gives identical guidance, rather than a different full-route mode.
+- Kept the established 100% Max maximum and removed the native boost path. Older 101–125% selections load at 100% without discarding other settings or rewriting historical scores.
+- Made local adaptation gradual between maps. The current map uses its starting profile; newly observed raw movement contributes to later maps, with bounded directional confidence over time.
+- Fixed a learning defect where entering a slider discarded the valid circle movement just completed. Slider movement remains excluded from training.
+- Preserved Max's physical movement requirement, AFK protection, AC/Relax cooperation, independent automatic sliders, all ten presets, PP rules, Maple and the qualified model.
+- Requalified deterministic guidance/learning, profile migration, rendered menus, native lifecycle, portable startup and data-preserving updates. Human device feel and existing dense-replay/server/platform limits remain documented.
+
+See [1.5.2 correction and qualification](docs/STABLE_REMASTERED_V15_2_ASSIST_CORRECTION.md).
+
 ## 1.5.1 — Max Assist refinement, Adaptive Assist and aim style presets (20 October 2026)
 
 - Promoted the previous Max V2 to the normal Max Assist and removed the retired Max V1 selector/publication path. Historical contexts remain readable. Maple V1/V3 stay separate.

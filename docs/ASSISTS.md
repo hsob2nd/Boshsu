@@ -34,7 +34,15 @@ Gameplay decisions use the map/gameplay clock. AFK activity uses monotonic real 
 
 Include the map/difficulty, mods, runtime Timewarp, generated Map Lab metadata, cursor mode/strength, AC, Relax and slider settings. Describe whether movement, target switching, tapping or a slider body is wrong. A miss count alone does not establish which owner failed. Do not post private profiles or authentication files.
 
-## Max Assist in 1.5.1
+## Max Assist and Adaptive in 1.5.2 (current)
+
+Strength ends at **100%**, the established Max maximum. Older higher selections load at 100%, preserving other options and history. The ten presets remain optional and preserve strength, slider mode, AC, Relax, rate and consent.
+
+**Adaptive Assist is normal Max plus gradual optional learning.** With learning Off or an empty profile it gives the same guidance. Explicit opt-in records bounded local raw movement before assistance. The map uses the profile available at its start; new observations affect later maps. Learning shapes a small part of the route and does not raise aim strength or change deadlines, tapping or PP. A fresh release never enables learning automatically. Existing learning data and consent are retained.
+
+Automatic sliders and Guided remain separate choices; AC is not required for Max automatic bodies. Meaningful physical mouse/tablet movement is required; taps alone do not bypass AFK protection. See the [correction report](STABLE_REMASTERED_V15_2_ASSIST_CORRECTION.md).
+
+## Max Assist in 1.5.1 (historical behavior, superseded above)
 
 The former Max V2 is now the normal **Max Assist**. Open **Options → Assists → Max Assist**. **100%** equals the previous maximum; 101–125% is an optional extended range. Existing lower intensity is preserved until you edit strength. Target refinement is separate from strength. **Aim style** offers ten optional route presets; Advanced edits show Custom. Presets preserve strength, slider mode, AC, Relax, rate and learning consent.
 

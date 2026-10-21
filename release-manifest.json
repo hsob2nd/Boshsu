@@ -1,42 +1,43 @@
 {
   "Product": "Boshsu",
-  "Version": "1.5.1",
-  "Tag": "v1.5.1",
+  "Version": "1.5.2",
+  "Tag": "v1.5.2",
   "Channel": "Prerelease",
   "Platform": "Windows x64",
-  "InheritedBaselineTag": "v1.4.0-rc.2",
+  "InheritedBaselineTag": "v1.5.1",
   "FreshUserData": true,
   "PersonalDataIncluded": false,
   "DetailedTelemetryDefault": false,
   "LearningDefault": false,
   "AutomaticCrashUploads": false,
+  "MaximumMaxStrength": 1,
+  "AdaptiveUsesMaxBaseline": true,
   "PPRewardsChanged": false,
   "SavedScoresRecalculated": false,
   "ProtectedPPFilesUnchanged": 2876,
   "MapleImplementationChanged": false,
   "QualifiedAssistModelChanged": false,
-  "MaxAssistAssertions": 59232,
-  "AccountProviderAssertions": 3487,
+  "MaxAssistAssertions": 149787,
+  "AccountProviderAssertions": 3493,
+  "MenuAssertions": 159,
   "GameplayCycles": 8,
-  "IssueFixReport": "docs/STABLE_REMASTERED_V15_MAX_ASSIST.md",
-  "IssueLedger": "docs/GITHUB_ISSUE_WORK_REPORT.md",
+  "IssueFixReport": "docs/STABLE_REMASTERED_V15_2_ASSIST_CORRECTION.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": true,
+  "HostedCIQualified": false,
   "PhysicalDeviceFeelQualified": false,
-  "UnclassifiedShutdownStallObserved": true,
   "DenseReplayQualified": false,
   "LiveOnlineSubmissionQualified": false,
   "LinuxQualified": false,
   "PublicRedistributionCertified": false,
   "PackagePreservation": {
     "Passed": true,
-    "Checks": 1669,
+    "Checks": 1670,
     "ProtectedFiles": 9,
-    "ApplicationFiles": 1646,
+    "ApplicationFiles": 1647,
     "RollbackVerified": true,
     "LiveInstallationTouched": false,
     "GameLaunched": false,
-    "Scope": "Actual complete package installed into a marked copy of the verified private portable checkpoint. Protected file bytes preserved; updater staging/recovery intentionally excluded. No player content uploaded."
+    "Scope": "Complete sealed 1.5.2 package installed over the sealed clean 1.5.1 package with nine synthetic protected files. Rollback injection and successful update both preserve all protected bytes; no live player data used."
   },
   "PortableColdStart": {
     "Passed": true,
@@ -56,83 +57,44 @@
         "ShutdownCompleted": true
       }
     ],
-    "PackageSHA256": "fed4731e303522ab70978a63c4be42438e2d0fdb2268d96cc8dd2656ff0f98f0",
-    "Scope": "Exact sealed clean ZIP extracted and launched twice on this Windows PC; isolated monitor override keeps the actual window on the left monitor. Not all hardware/DPI certification."
+    "PackageSHA256": "671bcbe4290f0b0a6ea5e984665f63a1ecb9b6998f51099a79348b3a2629669a",
+    "Scope": "Exact sealed portable ZIP launched twice on this Windows PC. Isolated actual-window monitor override keeps the test on the left monitor; not all display/DPI/hardware certification."
   },
   "DesktopInteraction": {
     "Passed": true,
-    "Scope": "Windows injected clicks, wheel and drag through computer-use; not human mouse/tablet gameplay feel.",
-    "Base": {
-      "Passed": true,
-      "Scope": "Windows injected mouse/keyboard actions through the computer-use skill; not human physical-device gameplay.",
-      "Actions": [
-        "Options click",
-        "Assists click",
-        "Max Assist click",
-        "Drag strength from 100 to 114",
-        "Automatic to Guided slider ownership",
-        "Open Advanced planner",
-        "Close own test with Alt+F4"
-      ],
-      "SavedStrength": 1.14,
-      "LearningEnabled": false,
-      "Shutdown": {
-        "MainReturned": true,
-        "ShutdownCompleted": true
-      }
-    },
-    "FinalActions": [
-      "Open Options / Assists / Max with left click",
-      "Open ten-style list",
-      "Wheel scroll stays on same page",
-      "Drag scrollbar to lower styles",
-      "Click Streams and verify saved values",
+    "Scope": "Windows computer-use injected mouse clicks, drag, scroll and keys; not human physical-device gameplay feel.",
+    "Actions": [
+      "Options left click",
+      "Assists left click",
+      "Open Max left click",
+      "Strength drag from 100 to 50",
+      "Drag past slider end caps at 100",
+      "Switch Adaptive to Standard",
+      "Enable Max; Maple excluded",
       "Switch Standard to Adaptive without enabling learning",
-      "Drag to learning status; Off with zero samples",
-      "Close isolated test cleanly"
+      "Scroll to learning Off / identical Max explanation",
+      "Alt+F4 own isolated client"
     ],
-    "Preset": "Streams",
-    "StrengthUnchanged": true,
+    "SavedStrength": 1.0,
     "LearningStayedOff": true,
+    "Display": "Left monitor; 1600x900 window",
     "Shutdown": {
       "MainReturned": true,
       "ShutdownCompleted": true
-    },
-    "FinalTextOnlyFollowup": "Learning paused wording when Max disabled; no behavior/layout change."
-  },
-  "Files": {
-    "Boshsu-1.5.1-clean.zip": {
-      "SHA256": "fed4731e303522ab70978a63c4be42438e2d0fdb2268d96cc8dd2656ff0f98f0",
-      "Bytes": 161750051
-    },
-    "Boshsu-1.5.1-source.zip": {
-      "SHA256": "1ea874287b5f4a59367027f79b2e590eaba569000a2cc76aefbfb9f254e5421e",
-      "Bytes": 126009701
-    },
-    "SHA256SUMS.txt": {
-      "SHA256": "810e24f7052330ac601c415d69aaf92697749ec0b1da060094dba0f227f61927",
-      "Bytes": 181
     }
   },
-  "HostedCI": {
-    "Id": 39500841054,
-    "Status": "completed",
-    "Conclusion": "success",
-    "URL": "https://github.com/hsob2nd/Boshsu/actions/runs/39500841054",
-    "Head": "617cd01b5e9552f36750ad4d3cf297b26e38b391",
-    "Jobs": [
-      {
-        "Name": "verify",
-        "Status": "completed",
-        "Conclusion": "success"
-      },
-      {
-        "Name": "cpu-regression",
-        "Status": "completed",
-        "Conclusion": "success"
-      }
-    ],
-    "Passed": true,
-    "Scope": "Linux published ZIP/member/pinned-source integrity; Windows portable-host contracts and source-compiled account/provider/PP CPU fixtures. Not a full source build, Linux launch, GPU or physical-device certificate."
+  "Files": {
+    "Boshsu-1.5.2-clean.zip": {
+      "SHA256": "671bcbe4290f0b0a6ea5e984665f63a1ecb9b6998f51099a79348b3a2629669a",
+      "Bytes": 161752499
+    },
+    "Boshsu-1.5.2-source.zip": {
+      "SHA256": "fbc45df765d4b66105dd92f7ed73ea9b615af8acaa5886759a9cdac589c47e37",
+      "Bytes": 126016344
+    },
+    "SHA256SUMS.txt": {
+      "SHA256": "4a9bd28bd1dd838565d4f6b528753cf30bbc965ed31dd9940e2a6f2bbbd5a214",
+      "Bytes": 181
+    }
   }
 }
