@@ -23,6 +23,7 @@ jobs:
       - name: Verify checksums, clean runtime and corresponding source
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: python .github/scripts/verify_release.py
   cpu-regression:
     needs: verify
@@ -39,4 +40,5 @@ jobs:
         shell: powershell
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: .github/scripts/run_cpu.ps1 -Tag $env:RELEASE_TAG

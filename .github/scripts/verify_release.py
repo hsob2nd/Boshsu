@@ -6,8 +6,17 @@ TAG=os.environ['RELEASE_TAG']
 if not re.fullmatch(r'v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?',TAG):raise ValueError('Invalid release tag')
 
 def download(url,limit):
-    request=urllib.request.Request(url,headers={'User-Agent':'Boshsu-release-integrity','Accept':'application/vnd.github+json'})
-    with urllib.request.urlopen(request,timeout=120) as response:
+    headers={'User-Agent':'Boshsu-release-integrity','Accept':'application/vnd.github+json'}
+    api=url.startswith('https://api.github.com/repos/'+REPO+'/')
+    token=os.environ.get('GITHUB_TOKEN') if api else None
+    if token:headers['Authorization']='Bearer '+token
+    request=urllib.request.Request(url,headers=headers)
+    # The job's read-only token is sent only to this repository's API. Never
+    # forward it through a redirect or to a release asset/CDN download.
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self,*args,**kwargs):return None
+    opener=urllib.request.build_opener(NoRedirect()).open if api else urllib.request.urlopen
+    with opener(request,timeout=120) as response:
         value=response.read(limit+1)
     if len(value)>limit:raise ValueError('Download size limit exceeded')
     return value

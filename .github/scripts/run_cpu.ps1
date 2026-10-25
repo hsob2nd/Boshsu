@@ -1,7 +1,10 @@
 param([Parameter(Mandatory=$true)][ValidatePattern('^v\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?$')][string]$Tag)
 $ErrorActionPreference='Stop'
-# Only matching, checksum-verified public release inputs; no credentials or GUI.
-$release=Invoke-RestMethod -Uri "https://api.github.com/repos/hsob2nd/Boshsu/releases/tags/$Tag"
+# Only matching, checksum-verified public inputs; no player credentials or GUI.
+# Use the job token solely for this API request. Asset downloads stay anonymous.
+$apiHeaders=@{Accept="application/vnd.github+json"}
+if ($env:GITHUB_TOKEN) {$apiHeaders.Authorization="Bearer "+$env:GITHUB_TOKEN}
+$release=Invoke-RestMethod -Uri "https://api.github.com/repos/hsob2nd/Boshsu/releases/tags/$Tag" -Headers $apiHeaders -MaximumRedirection 0
 if ($release.draft -or $release.tag_name -ne $Tag) { throw 'Published release identity differs' }
 $root=Join-Path $env:RUNNER_TEMP ('boshsu-cpu-'+[Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root | Out-Null
