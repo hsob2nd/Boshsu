@@ -23,7 +23,7 @@
   "GameplayCycles": 8,
   "IssueFixReport": "docs/STABLE_REMASTERED_V15_3_LEARNING_BUDGET.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": false,
+  "HostedCIQualified": true,
   "PhysicalDeviceFeelQualified": false,
   "DenseReplayQualified": false,
   "LiveOnlineSubmissionQualified": false,
@@ -90,5 +90,34 @@
       "ShutdownCompleted": true
     },
     "Scope": "Rendered in-process navigation and computer-use observation; not human physical mouse/tablet feel."
+  },
+  "HostedCI": {
+    "Id": 40194508085,
+    "Status": "completed",
+    "Conclusion": "success",
+    "URL": "https://github.com/hsob2nd/Boshsu/actions/runs/40194508085",
+    "Head": "eab9b34e188a940705e48f9475f05472ffe1c06f",
+    "ReleaseCommit": "1e91da7476b8a84de0c2ec1e131601c44a8b1d32",
+    "Tag": "v1.5.3",
+    "Jobs": [
+      {
+        "Name": "verify",
+        "Status": "completed",
+        "Conclusion": "success"
+      },
+      {
+        "Name": "cpu-regression",
+        "Status": "completed",
+        "Conclusion": "success"
+      }
+    ],
+    "Passed": true,
+    "VerifiedUTC": "2026-10-25T12:53:53.654573+00:00",
+    "InitialFailure": {
+      "Run": 40194149613,
+      "Reason": "Unauthenticated GitHub API 403 rate limit",
+      "URL": "https://github.com/hsob2nd/Boshsu/actions/runs/40194149613"
+    },
+    "Scope": "Linux verification of the exact published v1.5.3 ZIP/member/pinned-source hashes and Windows portable-host contracts plus source-compiled account/provider/PP fixtures. Release artifacts/commit 1e91da7 unchanged; workflow at eab9b34 contains only CI authentication maintenance. Not a full source build, Linux runtime, GPU benchmark or human physical-device feel certification."
   }
 }
