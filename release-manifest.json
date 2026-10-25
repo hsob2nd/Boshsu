@@ -1,10 +1,10 @@
 {
   "Product": "Boshsu",
-  "Version": "1.5.2",
-  "Tag": "v1.5.2",
+  "Version": "1.5.3",
+  "Tag": "v1.5.3",
   "Channel": "Prerelease",
   "Platform": "Windows x64",
-  "InheritedBaselineTag": "v1.5.1",
+  "InheritedBaselineTag": "v1.5.2",
   "FreshUserData": true,
   "PersonalDataIncluded": false,
   "DetailedTelemetryDefault": false,
@@ -17,13 +17,13 @@
   "ProtectedPPFilesUnchanged": 2876,
   "MapleImplementationChanged": false,
   "QualifiedAssistModelChanged": false,
-  "MaxAssistAssertions": 149787,
-  "AccountProviderAssertions": 3493,
+  "MaxAssistAssertions": 149793,
+  "AccountProviderAssertions": 3567,
   "MenuAssertions": 159,
   "GameplayCycles": 8,
-  "IssueFixReport": "docs/STABLE_REMASTERED_V15_2_ASSIST_CORRECTION.md",
+  "IssueFixReport": "docs/STABLE_REMASTERED_V15_3_LEARNING_BUDGET.md",
   "AllIssuesResolved": false,
-  "HostedCIQualified": true,
+  "HostedCIQualified": false,
   "PhysicalDeviceFeelQualified": false,
   "DenseReplayQualified": false,
   "LiveOnlineSubmissionQualified": false,
@@ -31,13 +31,13 @@
   "PublicRedistributionCertified": false,
   "PackagePreservation": {
     "Passed": true,
-    "Checks": 1670,
+    "Checks": 1671,
     "ProtectedFiles": 9,
-    "ApplicationFiles": 1647,
+    "ApplicationFiles": 1648,
     "RollbackVerified": true,
     "LiveInstallationTouched": false,
     "GameLaunched": false,
-    "Scope": "Complete sealed 1.5.2 package installed over the sealed clean 1.5.1 package with nine synthetic protected files. Rollback injection and successful update both preserve all protected bytes; no live player data used."
+    "Scope": "Actual complete package installed into a marked copy of the verified private portable checkpoint. Protected file bytes preserved; updater staging/recovery intentionally excluded. No player content uploaded."
   },
   "PortableColdStart": {
     "Passed": true,
@@ -57,66 +57,38 @@
         "ShutdownCompleted": true
       }
     ],
-    "PackageSHA256": "671bcbe4290f0b0a6ea5e984665f63a1ecb9b6998f51099a79348b3a2629669a",
-    "Scope": "Exact sealed portable ZIP launched twice on this Windows PC. Isolated actual-window monitor override keeps the test on the left monitor; not all display/DPI/hardware certification."
-  },
-  "DesktopInteraction": {
-    "Passed": true,
-    "Scope": "Windows computer-use injected mouse clicks, drag, scroll and keys; not human physical-device gameplay feel.",
-    "Actions": [
-      "Options left click",
-      "Assists left click",
-      "Open Max left click",
-      "Strength drag from 100 to 50",
-      "Drag past slider end caps at 100",
-      "Switch Adaptive to Standard",
-      "Enable Max; Maple excluded",
-      "Switch Standard to Adaptive without enabling learning",
-      "Scroll to learning Off / identical Max explanation",
-      "Alt+F4 own isolated client"
-    ],
-    "SavedStrength": 1.0,
-    "LearningStayedOff": true,
-    "Display": "Left monitor; 1600x900 window",
-    "Shutdown": {
-      "MainReturned": true,
-      "ShutdownCompleted": true
-    }
+    "PackageSHA256": "be20a3d36b72ab9675fb9a66e782aa36559d864150b25c8c7dafb09e0f66b429",
+    "Scope": "Exact sealed portable ZIP launched twice on this Windows PC. Isolated actual-window monitor override keeps tests on the left monitor; not all display/DPI/hardware certification."
   },
   "Files": {
-    "Boshsu-1.5.2-clean.zip": {
-      "SHA256": "671bcbe4290f0b0a6ea5e984665f63a1ecb9b6998f51099a79348b3a2629669a",
-      "Bytes": 161752499
+    "Boshsu-1.5.3-clean.zip": {
+      "SHA256": "be20a3d36b72ab9675fb9a66e782aa36559d864150b25c8c7dafb09e0f66b429",
+      "Bytes": 161755775
     },
-    "Boshsu-1.5.2-source.zip": {
-      "SHA256": "fbc45df765d4b66105dd92f7ed73ea9b615af8acaa5886759a9cdac589c47e37",
-      "Bytes": 126016344
+    "Boshsu-1.5.3-source.zip": {
+      "SHA256": "769f574a6bd30ffd9d973d0f956127b29d0cfdea4c6b3aafd86c7045756aa4a5",
+      "Bytes": 126020662
     },
     "SHA256SUMS.txt": {
-      "SHA256": "4a9bd28bd1dd838565d4f6b528753cf30bbc965ed31dd9940e2a6f2bbbd5a214",
+      "SHA256": "dd48a0e2d4bfd1f1e64d547ac96ed26efdf021b1097e27697740bb6e4f9569a7",
       "Bytes": 181
     }
   },
-  "HostedCI": {
-    "Id": 39643384903,
-    "Status": "completed",
-    "Conclusion": "success",
-    "URL": "https://github.com/hsob2nd/Boshsu/actions/runs/39643384903",
-    "Head": "e2937c092aa342461317a713e9b400bf16078763",
-    "Jobs": [
-      {
-        "Name": "verify",
-        "Status": "completed",
-        "Conclusion": "success"
-      },
-      {
-        "Name": "cpu-regression",
-        "Status": "completed",
-        "Conclusion": "success"
-      }
-    ],
+  "MaximumLearnedMovements": 100000,
+  "LearningBudget": "Total weighted summary; continued adaptation at capacity",
+  "LearningStoreAssertions": 87,
+  "RenderedNavigation": {
     "Passed": true,
-    "VerifiedUTC": "2026-10-21T17:28:53.748621+00:00",
-    "Scope": "Linux published ZIP/member/pinned-source integrity and Windows portable-host contracts plus source-compiled account/provider/PP CPU fixtures. Not a full source build, Linux runtime, GPU benchmark or human physical-device feel certification."
+    "Assertions": 159,
+    "Resolutions": [
+      "1280x720",
+      "1024x768",
+      "1600x900"
+    ],
+    "Shutdown": {
+      "MainReturned": true,
+      "ShutdownCompleted": true
+    },
+    "Scope": "Rendered in-process navigation and computer-use observation; not human physical mouse/tablet feel."
   }
 }

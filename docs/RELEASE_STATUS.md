@@ -1,5 +1,5 @@
-# Boshsu 1.5.2 status
+# Boshsu 1.5.3 status
 
-[Complete portable beta and matching source](https://github.com/hsob2nd/Boshsu/releases/tag/v1.5.2). Adaptive now uses normal Max guidance with gradual optional local learning; strength ends at 100%. PP rules, Maple, qualified model data and player history are preserved.
+[Portable Windows beta and matching source](https://github.com/hsob2nd/Boshsu/releases/tag/v1.5.3). Adaptive keeps up to 100,000 weighted learned movements and continues gradual adaptation within that budget. Max strength remains at 100%; existing learning, profiles, scores and PP rules are preserved.
 
-The [correction report](STABLE_REMASTERED_V15_2_ASSIST_CORRECTION.md) documents deterministic, menu, desktop, native lifecycle/frame-time, package startup and update checks. [Hosted qualification for the exact released commit](https://github.com/hsob2nd/Boshsu/actions/runs/39643384903) passed: Linux release ZIP/member/pinned-source integrity and Windows portable-host contracts plus source-compiled account/provider/PP CPU fixtures. This does not certify a full source build, Linux runtime, GPU performance or human physical-device feel. Dense native replay equivalence, one earlier unclassified 1.5.1 exit stall, human device feel, broader hardware, live server submission, Linux runtime and supplied asset/source provenance retain their documented limits.
+See [implementation and qualification](STABLE_REMASTERED_V15_3_LEARNING_BUDGET.md). Hosted qualification for this exact release is pending; previous runs are not inherited. Dense replay equivalence, an earlier unclassified 1.5.1 exit stall, human device feel, live server submission, Linux runtime, broader hardware and supplied asset/source provenance retain their documented limits.

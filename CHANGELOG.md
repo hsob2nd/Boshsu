@@ -4,6 +4,16 @@ Development history of **Boshsu**, previously **Bosh / Stable Remastered** and *
 
 The latest candidate is listed first. The earlier history below runs from the project's origins forward. Dates are included where the records establish them; maintenance passes have not been assigned invented release numbers. Development checkpoints and superseded experiments are distinguished from released features.
 
+## 1.5.3 — Adaptive learning up to 100,000 movements (25 October 2026)
+
+- Increased Adaptive's total retained movement budget to 100,000, replacing the former 2,048-per-direction limit.
+- Kept learning active at capacity: valid new observations gradually replace older influence in the existing small directional summary. This is not an archive of 100,000 raw cursor paths or an exact chronological window.
+- Preserved existing learning, explicit consent, fixed per-map seeds, normal Max guidance, the 100% strength maximum, AC/Relax/sliders, PP rules and saved scores.
+- Updated the learning progress display and explanation. Detailed log limits and current-session retention remain unchanged.
+- Validated full-cap storage, continued adaptation, corrupt-data recovery, managed/native seed agreement, rendered menus, native lifecycle, portable startup and data-preserving updates.
+
+See [1.5.3 implementation and qualification](docs/STABLE_REMASTERED_V15_3_LEARNING_BUDGET.md).
+
 ## 1.5.2 — Adaptive uses Max guidance; 100% maximum (21 October 2026)
 
 - Corrected Adaptive Assist to use the same blended guidance as normal Max. Learning Off or an untrained profile now gives identical guidance, rather than a different full-route mode.

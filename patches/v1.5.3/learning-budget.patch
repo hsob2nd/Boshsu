@@ -1,0 +1,234 @@
+--- /dev/null
++++ b/stable-remastered/STABLE_REMASTERED_V15_3_LEARNING_BUDGET.md
+@@ -0,0 +1,35 @@
++# Boshsu 1.5.3 — 100,000-movement Adaptive learning budget
++
++Continues the sealed 1.5.2 client. Adaptive retains normal Max guidance and optional gradual local movement learning. Max strength remains capped at **100%**. PP formulas, rewards, scores, qualified planner data, Maple, AC, Relax and slider ownership are unchanged.
++
++## What the cap means
++
++The profile now retains a **total effective budget of 100,000 valid learned movements** across its eight directional statistics. This replaces the former limit of 2,048 per direction (16,384 total). A common direction can continue learning beyond 2,048 without waiting for other directions to fill.
++
++These are completed qualifying unassisted movements, not device polls, individual coordinates or saved aim trajectories. The persistent data remains an eight-bin count/curvature summary smaller than 16 KiB plus one bounded backup. No raw cursor archive is added. Detailed session logs keep their existing independent limits and startup retention policy.
++
++## Continued adaptation at capacity
++
++When the next map's observations would exceed the total budget, the existing account worker proportionally reduces older directional influence, then adds every valid new observation. Largest-remainder rounding keeps the total at exactly 100,000 without allowing eight separate 100,000 limits. Each retained direction's mean is preserved while its old weight is reduced.
++
++This is a weighted summary with gradual forgetting, **not an exact chronological queue of the last 100,000 movements**. Learning does not freeze at capacity. A full profile changes more slowly than a small profile; greater sample count is not a guarantee of better aim. The existing explicit Reset action remains available.
++
++The active map still uses a fixed starting profile. New observations contribute to later maps, outside critical gameplay timing. No new aim worker, input owner, per-frame scan, file I/O or training pass is introduced. The map clock, raw-movement requirement, AFK protection, 512-observation directional confidence ramp, shape bounds, target deadlines and endpoints remain as in 1.5.2.
++
++## Compatibility and presentation
++
++Existing version-one learning summaries load unchanged. No reset, invented observations or recalculation of historical scores is performed. The managed validator and native seed boundary accept the same 100,000 total and reject oversized/invalid summaries. The per-attempt limit of 256 qualifying observations per direction remains intact.
++
++Options → Assists → Max Assist → Adaptive shows the current count against 100,000 and explains continued adaptation. Consent remains explicit and local; a fresh clean release leaves learning Off. Selecting Standard or turning learning Off stops personal adaptation. No movement data is uploaded.
++
++An older 1.5.2 executable cannot read expanded summaries that exceed its former directional limit. Keep the matching 1.5.3 managed/native files together; use the verified updater and retain its recovery data when changing versions.
++
++## Qualification
++
++The native production-model suite passed **149,793 checks** with 6,012 hosted-model samples, including empty/full seed acceptance, a 100,001 total rejection and the existing Max/Adaptive equality, clock/device-poll, movement, endpoint and learning tests. The account/provider suite passed **3,567 assertions**, including **87 learning-storage checks**. New cases cover growth beyond the former directional cap, restart at 100,000, proportional ageing, retention of new observations, continued learning in a full single direction, randomized rolling merges, invalid totals, per-attempt limits, corruption recovery, duplicate events, profile isolation and bounded file/backup size.
++
++All eleven portable-host CPU suites passed. Eight real-client synthetic cycles passed 22 pause/resume pairs and three retries, with Standard/Adaptive, 100/50% strength, AC off/on and manual/Relax input. Both opted-in learning cycles used an explicit synthetic **100,000-movement seed through the managed-to-native boundary**. Selected fixture replay checks passed; dense native replay equivalence remains unqualified. The process exited cleanly and the native diagnostic writer drained with no dropped or failed records.
++
++The capped run recorded a weighted CPU-loop mean of **1.000186 ms**, versus 1.000186 ms for the sealed 1.5.2 capped fixture, and a maximum of **5.7315 ms**, versus 5.5764 ms previously. These include simulation-only frames and do not certify displayed FPS, input-to-display latency, human mouse/tablet feel, all hardware or a universal zero-spike guarantee. Private session evidence is excluded from public packages.
++
++Rendered-menu, sealed-package startup/update and protected-installation receipts are recorded in the final release status. Existing broader replay, live server, Linux runtime, device-feel and third-party asset/source provenance limits remain documented. Upstream GPL/MIT/OFL notices are retained.
+--- a/stable-remastered/application/Accounts/AssistLearningStore.cs
++++ b/stable-remastered/application/Accounts/AssistLearningStore.cs
+@@ -23,11 +23,23 @@
+         }
+         internal AssistLearningData Load(Guid id){lock(gate){try{return LocalAccountStore.Clone(Read(id).Data);}catch(Exception e)when(e is IOException||e is UnauthorizedAccessException){Warning="Local movement learning unavailable: "+e.Message;return new AssistLearningData();}}}
+         internal AssistLearningData Merge(Guid id,Guid attempt,AssistLearningData delta){lock(gate){
+-            if(attempt==Guid.Empty)throw new ArgumentException("Movement summary needs an attempt ID.");delta.Validate(256);var saved=Read(id);if(saved.Attempts.Contains(attempt)||delta.Segments==0)return LocalAccountStore.Clone(saved.Data);
+-            for(int i=0;i<8;i++){int count=saved.Data.Counts[i]+delta.Counts[i];double sum=saved.Data.CurvatureSums[i]+delta.CurvatureSums[i];if(count>2048){sum*=2048.0/count;count=2048;}saved.Data.Counts[i]=count;saved.Data.CurvatureSums[i]=sum;}
++            if(attempt==Guid.Empty)throw new ArgumentException("Movement summary needs an attempt ID.");delta.Validate(AssistLearningData.MaximumRunDirectionMovements);var saved=Read(id);if(saved.Attempts.Contains(attempt)||delta.Segments==0)return LocalAccountStore.Clone(saved.Data);
++            int retained=AssistLearningData.MaximumMovements-delta.Segments;
++            if(saved.Data.Segments>retained)Age(saved.Data,retained);
++            for(int i=0;i<8;i++){saved.Data.Counts[i]+=delta.Counts[i];saved.Data.CurvatureSums[i]+=delta.CurvatureSums[i];}
+             saved.Attempts.Add(attempt);if(saved.Attempts.Count>32)saved.Attempts.RemoveAt(0);saved.Data.Validate();string text=JsonConvert.SerializeObject(saved);if(text.Length>16384)throw new InvalidDataException("Movement summary exceeds its limit.");
+             Directory.CreateDirectory(root);string path=PathFor(id),temporary=path+".tmp";Plain(path);Plain(temporary);Plain(path+".bak");File.WriteAllText(temporary,text);if(File.Exists(path))File.Replace(temporary,path,path+".bak");else File.Move(temporary,path);return LocalAccountStore.Clone(saved.Data);
+         }}
++        // Keep every new observation and proportionally reduce older influence.
++        // Largest-remainder rounding preserves the exact total across all eight
++        // directions. No raw traces, extra worker or gameplay-time work added.
++        static void Age(AssistLearningData data,int target)
++        {
++            int total=data.Segments,remaining=target;var next=new int[8];var fractions=new double[8];
++            for(int i=0;i<8;i++){double exact=(double)data.Counts[i]*target/total;next[i]=(int)Math.Floor(exact);fractions[i]=exact-next[i];remaining-=next[i];}
++            while(remaining-->0){int best=0;for(int i=1;i<8;i++)if(fractions[i]>fractions[best])best=i;next[best]++;fractions[best]=-1;}
++            for(int i=0;i<8;i++){data.CurvatureSums[i]=data.Counts[i]==0?0:data.CurvatureSums[i]*next[i]/data.Counts[i];data.Counts[i]=next[i];}
++        }
+         internal void Reset(Guid id){lock(gate){string path=PathFor(id);foreach(string p in new[]{path,path+".bak",path+".tmp"}){Plain(p);if(File.Exists(p))File.Delete(p);}}}
+     }
+ }
+--- a/stable-remastered/application/Program.cs
++++ b/stable-remastered/application/Program.cs
+@@ -11,8 +11,8 @@
+ [assembly: InternalsVisibleTo("MaxAssist.PersonalGolden.Runtime")]
+ [assembly: System.Reflection.AssemblyProduct("Boshsu")]
+ [assembly: System.Reflection.AssemblyTitle("Boshsu")]
+-[assembly: System.Reflection.AssemblyFileVersion("1.5.2.0")]
+-[assembly: System.Reflection.AssemblyInformationalVersion("1.5.2")]
++[assembly: System.Reflection.AssemblyFileVersion("1.5.3.0")]
++[assembly: System.Reflection.AssemblyInformationalVersion("1.5.3")]
+ 
+ namespace StableRemastered.Application
+ {
+--- a/stable-remastered/application/Shell/ShellMaxAssist.cs
++++ b/stable-remastered/application/Shell/ShellMaxAssist.cs
+@@ -37,7 +37,7 @@
+                             if(active.LearningConsented){ChangeMaxAssist(v=>v.LearningEnabled=false,d);return;}
+                             Child(d,ShowMaxLearningConsent);
+                         },active.LearningConsented);return;}
+-                        if(action==6){c.Text(ApplicationServices.Accounts.AssistLearning.Segments+" learned movements · local aggregate only",14,row.X+12,row.Y+10,row.Width-24);c.Text(!active.LearningConsented?"Learning off · identical Max guidance; no personal adaptation":!DiagnosticSession.Ready?"Learning suspended: local diagnostic storage unavailable":!CursorAssistOwnership.MaxEnabled?"Learning paused · enable Max Assist in Adaptive mode to collect movement":"Learning from raw movement · bounded local cursor diagnostics enabled",12,row.X+12,row.Y+37,row.Width-24,BoshTheme.Muted);return;}
++                        if(action==6){c.Text(ApplicationServices.Accounts.AssistLearning.Segments.ToString("N0")+" / 100,000 learned movements · rolling influence",14,row.X+12,row.Y+10,row.Width-24);c.Text(!active.LearningConsented?"Learning off · identical Max guidance; no personal adaptation":!DiagnosticSession.Ready?"Learning suspended: local diagnostic storage unavailable":!CursorAssistOwnership.MaxEnabled?"Learning paused · enable Max Assist in Adaptive mode to collect movement":"Learning from raw movement · bounded local cursor diagnostics enabled",12,row.X+12,row.Y+37,row.Width-24,BoshTheme.Muted);return;}
+                         c.Button("Reset learned movement profile",new ShellRect(row.X+12,row.Y+14,row.Width-24,44),()=>Safe(()=>{ApplicationServices.Accounts.ResetAssistLearning();d.Reflow=true;}));
+                     });
+                 }
+@@ -70,7 +70,7 @@
+             Page("Local movement learning","Adaptive Assist · Experimental · optional · stored on this PC",d=>{
+                 var c=d.Canvas;var r=d.Content;
+                 c.Text("Learn from my raw mouse / tablet movement",20,r.X,r.Y,r.Width);
+-                c.Text("Learning needs Max Assist enabled in Adaptive mode, plus additional raw mouse/tablet cursor telemetry captured before assistance. Enable it only if you want movement collection. Meaningful directed movement is required; taps, replays, stationary jitter and assisted output cannot train it. It starts with normal Max guidance. Learned style is applied gradually between maps, not as an extra aim strength or timing change; improvement is not guaranteed.\n\nData stays on this PC. Session logs are bounded and cleared next launch. One small profile summary remains until Reset. Turning learning off stops collection. If diagnostic storage is unavailable, learning is suspended. Targets, hit windows and PP stay unchanged.",15,r.X,r.Y+54,r.Width,BoshTheme.Muted,false,.95f,202);
++                c.Text("Learning needs Max Assist enabled in Adaptive mode, plus additional raw mouse/tablet cursor telemetry captured before assistance. Enable it only if you want movement collection. Meaningful directed movement is required; taps, replays, stationary jitter and assisted output cannot train it. It starts with normal Max guidance. Learned style is applied gradually between maps, not as an extra aim strength or timing change; improvement is not guaranteed.\n\nData stays on this PC. Session logs are bounded and cleared next launch. One small profile summary retains up to 100,000 weighted movements until Reset. At capacity, new movements gradually replace older influence; this is not an archive of the last 100,000 raw paths. Turning learning off stops collection. If diagnostic storage is unavailable, learning is suspended. Targets, hit windows and PP stay unchanged.",15,r.X,r.Y+54,r.Width,BoshTheme.Muted,false,.95f,202);
+                 c.Button("Enable local learning",new ShellRect(r.X,r.Y+264,r.Width,46),()=>{ChangeMaxAssist(v=>{v.LearningEnabled=true;v.LearningConsentVersion=1;},d);Replace(d,()=>ShowMaxAssist());});
+                 c.Button("Keep learning off",new ShellRect(r.X,r.Y+324,r.Width,40),d.GoBack);
+             });
+--- a/stable-remastered/application/V12AssistQualification.cs
++++ b/stable-remastered/application/V12AssistQualification.cs
+@@ -23,6 +23,9 @@
+             settings.SliderTracking=settings.MaxAssistAutomaticSliders=true;settings.AimRadius=settings.RelaxAimRadius=150;
+             if(v14MaxV2Probe){settings.MaxAssistEnabled=true;settings.MaxAssist=new MaxAssistOptions{Version=MaxAssistVersion.V2};settings.Maple.Enabled=false;settings.AimCorrection=(cycle%4)>=2;settings.Relax=(cycle%2)==1;}
+             if(v15MaxProbe){settings.MaxAssistEnabled=true;settings.MaxAssist=new MaxAssistOptions{Version=MaxAssistVersion.V2,Strength=cycle%2==0?1:.5,Mode=cycle>=4?MaxAssistMode.ExperimentalPlanned:MaxAssistMode.Standard,LearningEnabled=cycle>=6,LearningConsentVersion=cycle>=6?1:0};settings.AssistIntensity=.5*settings.MaxAssist.Strength.Value;settings.Maple.Enabled=false;settings.AimCorrection=(cycle%4)>=2;settings.Relax=(cycle%2)==1;settings.RecordDiagnostics=true;}
++            // Explicit disposable runner only: exercise the complete managed ->
++            // native seed boundary at its new total budget during learning maps.
++            if(v15MaxProbe&&settings.MaxAssist.LearningConsented)settings.AssistLearningSeed=new AssistLearningData{Counts=Enumerable.Repeat(12500,8).ToArray(),CurvatureSums=Enumerable.Repeat(250.0,8).ToArray()};
+             settings.RawInput=settings.AbsoluteToWindow=true;settings.Rate=1;ctx.ModBits=1;
+             if(v15MaxProbe){osu.Configuration.ConfigManager.sRawInput.Value=true;osu.Configuration.ConfigManager.sAbsoluteToOsuWindow.Value=true;}
+             bool objects=false;var times=new List<int>();foreach(string line in File.ReadLines(ctx.Beatmap.AbsolutePath)){if(line.Trim()=="[HitObjects]"){objects=true;continue;}if(!objects||line.Length==0||line[0]=='/'||line[0]=='[')continue;var values=line.Split(',');int time;if(values.Length>=5&&int.TryParse(values[2],out time))times.Add(time);}
+--- a/stable-remastered/contracts/AssistLearningData.cs
++++ b/stable-remastered/contracts/AssistLearningData.cs
+@@ -5,14 +5,19 @@
+     // Fixed-size aggregate only: no cursor trace, account name or device ID.
+     public sealed class AssistLearningData
+     {
++        // Effective retained observations, not raw device packets or an exact
++        // chronological queue. At capacity the account worker ages old weight.
++        public const int MaximumMovements=100000;
++        public const int MaximumRunDirectionMovements=256;
+         public int Version {get;set;}=1;
+         public int[] Counts {get;set;}=new int[8];
+         public double[] CurvatureSums {get;set;}=new double[8];
+         public int Segments=>Counts?.Sum()??0;
+-        public void Validate(int maximum=2048)
++        public void Validate(int maximum=MaximumMovements)
+         {
+             if(Version!=1||Counts==null||CurvatureSums==null||Counts.Length!=8||CurvatureSums.Length!=8)throw new ArgumentException("Invalid local movement summary.");
+             for(int i=0;i<8;i++)if(Counts[i]<0||Counts[i]>maximum||double.IsNaN(CurvatureSums[i])||double.IsInfinity(CurvatureSums[i])||Math.Abs(CurvatureSums[i])>Counts[i]*.2+1e-9)throw new ArgumentException("Invalid local movement statistic.");
++            if(Counts.Sum(v=>(long)v)>MaximumMovements)throw new ArgumentException("Local movement summary exceeds its total budget.");
+         }
+     }
+ }
+--- a/stable-remastered/contracts/ClientUpdatePackage.cs
++++ b/stable-remastered/contracts/ClientUpdatePackage.cs
+@@ -16,7 +16,7 @@
+     }
+     public static class ClientRelease
+     {
+-        public const string Repository="hsob2nd/Boshsu",Tag="v1.5.2";
++        public const string Repository="hsob2nd/Boshsu",Tag="v1.5.3";
+         static readonly Regex Version=new Regex(@"^v?(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?$",RegexOptions.CultureInvariant);
+         public static int Compare(string a,string b)
+         {
+--- a/stable-remastered/engine/BackendApp.cpp
++++ b/stable-remastered/engine/BackendApp.cpp
+@@ -371,7 +371,8 @@
+         if(!learn.empty()){
+             const auto counts=learn.value("Counts",Json::array()),sums=learn.value("CurvatureSums",Json::array());
+             if(learn.value("Version",0)!=1||counts.size()!=8||sums.size()!=8)throw std::runtime_error("Invalid local movement seed.");
+-            for(int i=0;i<8;i++){int count=counts[i].get<int>();double sum=sums[i].get<double>();if(count<0||count>2048||!std::isfinite(sum)||std::abs(sum)>count*.2+1e-9)throw std::runtime_error("Invalid local movement statistic.");learnCounts[i]=count;learnSums[i]=sum;}
++            for(int i=0;i<8;i++){int count=counts[i].get<int>();if(count<0)throw std::runtime_error("Invalid local movement statistic.");learnCounts[i]=count;learnSums[i]=sums[i].get<double>();}
++            if(!ultimate::personal::AssistLearning::validSeed(learnCounts,learnSums))throw std::runtime_error("Invalid local movement statistic or total budget.");
+         }
+         ultimate::personal::configureMaxLearning(learnCounts,learnSums);
+         setting("ultimate_personal_maxassist_refinement",maxPower);
+--- a/stable-remastered/engine/mcosu/ultimate/personal/AssistLearning.h
++++ b/stable-remastered/engine/mcosu/ultimate/personal/AssistLearning.h
+@@ -6,6 +6,13 @@
+ class AssistLearning {
+ public:
+     using Counts=std::array<unsigned,8>;using Sums=std::array<double,8>;
++    static const unsigned MaximumMovements=100000;
++    static bool validSeed(const Counts& counts,const Sums& sums){
++        unsigned total=0;for(unsigned i=0;i<8;i++){
++            if(counts[i]>MaximumMovements||!std::isfinite(sums[i])||std::abs(sums[i])>counts[i]*.2+1e-9)return false;
++            total+=counts[i];
++        }return total<=MaximumMovements;
++    }
+     void begin(bool consent,const Counts& counts=Counts(),const Sums& sums=Sums()){
+         enabled_=consent;seedCounts_=counts;seedSums_=sums;counts_=Counts();sums_=Sums();discard();
+     }
+--- a/stable-remastered/frontend/Bosh/osu!/Constants/General.cs
++++ b/stable-remastered/frontend/Bosh/osu!/Constants/General.cs
+@@ -20,7 +20,7 @@
+ 
+         internal static string INTERNAL_BUILD_NAME => StableRemastered.Online.OnlineCapabilities.ClientIdentity;
+ 
+-        internal static string BUILD_NAME { get { return "Boshsu 1.5.2"; } }
++        internal static string BUILD_NAME { get { return "Boshsu 1.5.3"; } }
+         // Supplied Bosh archive's protocol revision/channel. Product branding
+         // is separate; authentication still sends this executable's real hash.
+         internal static string BOSH_PROTOCOL_BUILD => "b" + FULL_VERSION + "cuttingedge";
+--- a/stable-remastered/tests/V15LearningStoreTests.cs
++++ b/stable-remastered/tests/V15LearningStoreTests.cs
+@@ -16,8 +16,29 @@
+         store.Merge(a,attempt,delta);Check(store.Load(a).Segments==3,"Duplicate terminal event learned twice");
+         Check(new AssistLearningStore(path).Load(a).CurvatureSums[0]==.12,"Learning restart persistence");
+         for(int n=0;n<1000;n++)store.Merge(a,Guid.NewGuid(),delta);
+-        var saved=store.Load(a);Check(saved.Counts[0]==2048&&Math.Abs(saved.CurvatureSums[0])<2048*.2,"Learning cap");
++        var saved=store.Load(a);Check(saved.Counts[0]==3003&&Math.Abs(saved.CurvatureSums[0])<3003*.2,"Old directional cap still limits learning");
+         string file=Path.Combine(path,"assist-learning",a.ToString("N")+".json");Check(new FileInfo(file).Length<16384&&Directory.GetFiles(Path.GetDirectoryName(file)).Length==2,"Learning file/backup bounded");
++        var full=new AssistLearningData{Counts=Enumerable.Repeat(12500,8).ToArray(),CurvatureSums=Enumerable.Repeat(250.0,8).ToArray()};full.Validate();
++        File.WriteAllText(file,JsonConvert.SerializeObject(new{Data=full,Attempts=new Guid[0]}));
++        Check(new AssistLearningStore(path).Load(a).Segments==100000,"Full-budget restart failed");
++        var fresh=new AssistLearningData();fresh.Counts[0]=256;fresh.CurvatureSums[0]=-25.6;
++        saved=store.Merge(a,Guid.NewGuid(),fresh);Check(saved.Segments==100000,"Total learning budget exceeded");
++        Check(saved.Counts[0]==12724&&saved.Counts.Skip(1).All(v=>v==12468),"Old influence was not proportionally aged");
++        Check(saved.CurvatureSums[0]<full.CurvatureSums[0]&&Enumerable.Range(1,7).All(i=>Math.Abs(saved.CurvatureSums[i]/saved.Counts[i]-.02)<1e-12),"New movement ignored or old direction means changed");
++        Check(Math.Abs(saved.CurvatureSums[0]-(12468*.02-25.6))<1e-9,"New observations were prematurely diluted");
++        var random=new Random(153);for(int iteration=0;iteration<64;iteration++){
++            var next=new AssistLearningData();for(int i=0;i<8;i++){next.Counts[i]=random.Next(257);next.CurvatureSums[i]=next.Counts[i]*(random.NextDouble()*.4-.2);}
++            saved=store.Merge(a,Guid.NewGuid(),next);saved.Validate();Check(saved.Segments==100000&&Enumerable.Range(0,8).All(i=>saved.Counts[i]>=next.Counts[i]),"Rolling budget lost new observations");
++        }
++        Check(new FileInfo(file).Length<16384&&new AssistLearningStore(path).Load(a).Segments==100000,"Rolling budget grew storage or failed persistence");
++        var single=new AssistLearningData();single.Counts[3]=100000;single.CurvatureSums[3]=10000;single.Validate();
++        File.WriteAllText(file,JsonConvert.SerializeObject(new{Data=single,Attempts=new Guid[0]}));
++        var opposite=new AssistLearningData();opposite.Counts[3]=256;opposite.CurvatureSums[3]=-25.6;
++        for(int i=0;i<10;i++)saved=store.Merge(a,Guid.NewGuid(),opposite);
++        Check(saved.Counts[3]==100000&&saved.Segments==100000&&saved.CurvatureSums[3]<10000,"Full single direction froze learning");
++        Check(saved.CurvatureSums[3]>9000,"A full profile changed too abruptly");
++        var tooLarge=new AssistLearningData();tooLarge.Counts[0]=100000;tooLarge.Counts[1]=1;bool totalRejected=false;try{tooLarge.Validate();}catch(ArgumentException){totalRejected=true;}Check(totalRejected,"More than 100000 total observations accepted");
++        var excessiveDelta=new AssistLearningData();excessiveDelta.Counts[0]=257;bool deltaRejected=false;try{store.Merge(a,Guid.NewGuid(),excessiveDelta);}catch(ArgumentException){deltaRejected=true;}Check(deltaRejected,"Run-direction limit removed");
+         File.WriteAllText(file,"corrupt");Check(new AssistLearningStore(path).Load(a).Segments>0,"Corrupt primary backup recovery");
+         File.WriteAllText(file+".bak","corrupt");Check(new AssistLearningStore(path).Load(a).Segments==0,"Corrupt primary and backup recovery");
+         delta.CurvatureSums[0]=double.NaN;bool rejected=false;try{store.Merge(a,Guid.NewGuid(),delta);}catch(ArgumentException){rejected=true;}Check(rejected,"Invalid delta accepted");
+--- a/stable-remastered/tests/V15MaxAssist.cpp
++++ b/stable-remastered/tests/V15MaxAssist.cpp
+@@ -27,6 +27,14 @@
+ }
+ void learn15(){
+     Object o=head(1000,400);AssistLearning::Counts zero{};AssistLearning::Sums sum{};
++    check15(AssistLearning::validSeed(zero,sum),"Empty seed rejected");
++    AssistLearning::Counts full{};AssistLearning::Sums fullSums{};full[0]=100000;fullSums[0]=20000;
++    check15(AssistLearning::validSeed(full,fullSums),"100000-movement seed rejected");
++    full[1]=1;check15(!AssistLearning::validSeed(full,fullSums),"Native total seed budget exceeded");full[1]=0;
++    fullSums[0]=20001;check15(!AssistLearning::validSeed(full,fullSums),"Native curvature bound exceeded");fullSums[0]=20000;
++    full[0]=100001;check15(!AssistLearning::validSeed(full,fullSums),"Native direction exceeds total budget");
++    for(unsigned i=0;i<8;i++){full[i]=12500;fullSums[i]=250;}
++    check15(AssistLearning::validSeed(full,fullSums),"Balanced full-budget seed rejected");
+     for(bool consent:{false,true}){
+         AssistLearning learn;learn.begin(consent);
+         for(int segment=0;segment<300;segment++){

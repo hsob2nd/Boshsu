@@ -8,15 +8,15 @@ McOsu-derived code retains GPL-3.0, and original project modifications retain th
 
 Boshsu combines familiar song selection and skin-controlled gameplay with local profiles, custom PP systems, Map Lab, assistance settings, progression and player customization.
 
-**Current client: 1.5.2 · Windows x64 · portable beta.** Standard uses McOsu; supplied Taiko/Catch/Mania have initial lifecycle/replay qualification. Mode PP remains unavailable under the PP freeze. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md) and the [issue-fix ledger](docs/GITHUB_ISSUE_WORK_REPORT.md).
+**Current client: 1.5.3 · Windows x64 · portable beta.** Standard uses McOsu; supplied Taiko/Catch/Mania have initial lifecycle/replay qualification. Mode PP remains unavailable under the PP freeze. Live online authentication/submission, Linux, broader hardware qualification and public redistribution licensing remain outstanding. See [release status](docs/RELEASE_STATUS.md) and the [issue-fix ledger](docs/GITHUB_ISSUE_WORK_REPORT.md).
 
-**Options → Assists → Max Assist** has a 100% strength maximum, target/slider controls and ten presets. **Adaptive Assist uses the same Max guidance**, with optional gradual local learning layered on top. With learning Off or no learned data, the modes agree. PP rules are unchanged. [Details and tests](docs/STABLE_REMASTERED_V15_2_ASSIST_CORRECTION.md).
+**Options → Assists → Max Assist** has a 100% strength maximum, target/slider controls and ten presets. **Adaptive Assist uses the same Max guidance**, with optional gradual local learning layered on top. With learning Off or no learned data, the modes agree. Adaptive retains up to **100,000 weighted movements**, then gradually replaces older influence while keeping storage small. PP rules are unchanged. [Details and tests](docs/STABLE_REMASTERED_V15_3_LEARNING_BUDGET.md).
 
 ## Download
 
-- **[Portable Windows x64 beta package — Boshsu-1.5.2-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.5.2/Boshsu-1.5.2-clean.zip)**
-- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.5.2/Boshsu-1.5.2-source.zip)
-- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.5.2/SHA256SUMS.txt)
+- **[Portable Windows x64 beta package — Boshsu-1.5.3-clean.zip](https://github.com/hsob2nd/Boshsu/releases/download/v1.5.3/Boshsu-1.5.3-clean.zip)**
+- [Corresponding source snapshot](https://github.com/hsob2nd/Boshsu/releases/download/v1.5.3/Boshsu-1.5.3-source.zip)
+- [Checksums](https://github.com/hsob2nd/Boshsu/releases/download/v1.5.3/SHA256SUMS.txt)
 - [Release notes](CHANGELOG.md)
 
 The beta is a complete portable client package, not just an executable or source download. Extract the **whole client ZIP** into a writable folder and run **Boshsu.exe**. Keep its DLLs and resource folders together. Do not run the executable from inside the ZIP. The application is built for **Windows x64 and .NET Framework 4.8**; a separate compiler or PP calculator installation is not required to play.

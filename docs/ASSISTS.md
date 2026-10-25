@@ -34,7 +34,11 @@ Gameplay decisions use the map/gameplay clock. AFK activity uses monotonic real 
 
 Include the map/difficulty, mods, runtime Timewarp, generated Map Lab metadata, cursor mode/strength, AC, Relax and slider settings. Describe whether movement, target switching, tapping or a slider body is wrong. A miss count alone does not establish which owner failed. Do not post private profiles or authentication files.
 
-## Max Assist and Adaptive in 1.5.2 (current)
+## Adaptive learning in 1.5.3 (current)
+
+The profile retains 100,000 weighted learned movements TOTAL across eight directions. At capacity, the account worker proportionally ages old influence and keeps fresh observations; it does not freeze learning. The summary remains below 16 KiB plus a backup. Detailed raw logs retain their existing separate budgets. Strength remains capped at 100%; fixed per-map seeds, normal Max guidance and explicit local consent are unchanged. [Details](STABLE_REMASTERED_V15_3_LEARNING_BUDGET.md).
+
+## Max Assist and Adaptive in 1.5.2
 
 Strength ends at **100%**, the established Max maximum. Older higher selections load at 100%, preserving other options and history. The ten presets remain optional and preserve strength, slider mode, AC, Relax, rate and consent.
 
